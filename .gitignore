@@ -1,0 +1,35 @@
+build
+build/*
+
+swap
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+# session
+Session.vim
+# temporary
+.netrwhist
+*~
+# auto-generated tag file
+tags
+
+run_omp.sh
+slurm*
+slurm-output/*
+matrix-output/
+matrix-output/*
+
+# configure.sh
+# build.sh
+run.sh
+
+modules_rbpik.md
+
+core/test/data/batch1_2_reduced.mtx
+core/test/data/cbcl1.mtx
+data/*
+scripts/slurm*
+build_old/*
+plots/*
+log/*
