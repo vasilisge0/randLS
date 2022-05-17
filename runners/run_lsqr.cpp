@@ -1,0 +1,371 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+
+
+#include "../include/randls.hpp"
+
+
+int precision_parser(std::string prec, std::string prec_in) {
+    if ((prec.compare("fp64") == 0) && (prec_in.compare("fp64") == 0)) {
+        return 0;
+    }
+    else if ((prec.compare("fp64") == 0) && (prec_in.compare("fp32") == 0)) {
+        return 1;
+    }
+    else if ((prec.compare("fp64") == 0) && (prec_in.compare("tf32") == 0)) {
+        return 2;
+    }
+    else if ((prec.compare("fp64") == 0) && (prec_in.compare("fp16") == 0)) {
+        return 3;
+    }
+    else if ((prec.compare("fp32") == 0) && (prec_in.compare("fp32") == 0)) {
+        return 4;
+    }
+    else if ((prec.compare("fp32") == 0) && (prec_in.compare("tf32") == 0)) {
+        return 5;
+    }
+    else if ((prec.compare("fp32") == 0) && (prec_in.compare("fp16") == 0)) {
+        return 6;
+    }
+    return -1;
+}
+
+struct lsqr {
+    rls::detail::magma_info magma_config;
+    magma_int_t num_rows = 0;
+    magma_int_t num_cols = 0;
+    magma_int_t sampled_rows = 0;
+    magma_int_t max_iter = num_rows;
+    magma_int_t iter = 0;
+    magma_int_t argc = 0;
+    magma_int_t matrix_selection = num_cols;
+    magma_int_t warmup_iters = 0;
+    magma_int_t runtime_iters = 0;
+    void* mtx = nullptr;
+    void* dmtx = nullptr;
+    void* sol = nullptr;
+    void* init_sol = nullptr;
+    void* rhs = nullptr;
+    void* precond_mtx = nullptr;
+    double sampling_coeff = 1.01;
+    double t_precond = 0.0;
+    double t_solve = 0.0;
+    double t_total = 0.0;
+    double t_precond_avg = 0.0;
+    double t_solve_avg = 0.0;
+    double t_total_avg = 0.0;
+    double tol = 1e-6;
+    double relres_norm = 0.0;
+    double relres_norm_avg = 0.0;
+    bool use_precond = false;
+    std::string filename_out;
+    std::vector<std::string> args;
+
+    void run();
+
+    void dispatch_preconditioner();
+
+    void dispatch_solver();
+
+    void print_runtime_info();
+
+    void write_output();
+
+    void initialize();
+
+    void finalize();
+};
+
+void lsqr::dispatch_preconditioner() {
+    auto first_index = 1;
+    std::string filename_mtx = args[first_index + 4];
+    std::string filename_rhs = args[first_index + 5];
+    std::cout << "  filename_mtx: " << filename_mtx << '\n';
+    std::cout << "  filename_rhs: " << filename_rhs << '\n';
+    std::cout << "sampling_coeff: " << sampling_coeff << '\n';
+
+    if (args[first_index + 6].compare("precond") == 0) {
+        use_precond = true;
+        sampling_coeff = std::atof(args[first_index + 7].c_str());
+    }
+
+    switch (precision_parser(args[first_index], args[first_index + 1]))
+    {
+    case 0:
+        rls::utils::initialize_with_precond<double, double, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (double**)&mtx, (double**)&dmtx, (double**)&init_sol, (double**)&sol,
+            (double**)&rhs, sampling_coeff, &sampled_rows, (double**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    case 1:
+        rls::utils::initialize_with_precond<float, double, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (double**)&mtx, (double**)&dmtx, (double**)&init_sol, (double**)&sol,
+            (double**)&rhs, sampling_coeff, &sampled_rows, (double**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    case 2:
+        rls::utils::initialize_with_precond_tf32<float, double, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (double**)&mtx, (double**)&dmtx, (double**)&init_sol, (double**)&sol,
+            (double**)&rhs, sampling_coeff, &sampled_rows, (double**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    case 3:
+        rls::utils::initialize_with_precond<__half, double, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (double**)&mtx, (double**)&dmtx, (double**)&init_sol, (double**)&sol,
+            (double**)&rhs, sampling_coeff, &sampled_rows, (double**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    case 4:
+        rls::utils::initialize_with_precond<float, float, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (float**)&mtx, (float**)&dmtx, (float**)&init_sol, (float**)&sol,
+            (float**)&rhs, sampling_coeff, &sampled_rows, (float**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    case 5:
+        rls::detail::use_tf32_math_operations(magma_config);
+        rls::utils::initialize_with_precond<float, float, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (float**)&mtx, (float**)&dmtx, (float**)&init_sol, (float**)&sol,
+            (float**)&rhs, sampling_coeff, &sampled_rows, (float**)&precond_mtx, magma_config, &t_precond);
+        rls::detail::disable_tf32_math_operations(magma_config);
+        break;
+
+    case 6:
+        rls::utils::initialize_with_precond<__half, float, int>(
+            filename_mtx, filename_rhs, &num_rows, &num_cols, (float**)&mtx, (float**)&dmtx, (float**)&init_sol, (float**)&sol,
+            (float**)&rhs, sampling_coeff, &sampled_rows, (float**)&precond_mtx, magma_config, &t_precond);
+        break;
+
+    default:
+        std::cout << "Exitting without running lsqr." << '\n';
+        break;
+    }
+}
+
+void lsqr::dispatch_solver() {
+    auto first_index = 3;
+    max_iter = num_rows;
+    // max_iter = 1;
+    iter = 0;
+    tol = std::atof(args[0].c_str());
+    relres_norm = 0.0;
+    clock_t t = clock();
+    if (!use_precond) {
+        switch (precision_parser(args[first_index], args[first_index + 1]))
+        {
+        case 0:
+            t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<double>(num_rows, num_cols, (double*)dmtx, (double*)rhs,
+                (double*)init_sol, (double*)sol, max_iter, &iter, tol,
+                &relres_norm, magma_config.queue);
+            t_solve = magma_sync_wtime(magma_config.queue) - t;
+            break;
+
+        // case 1:
+        //     rls::solver::lsqr::run<float, double, magma_int_t>(num_rows, num_cols, (double*)dmtx, (double*)rhs,
+        //         (double*)init_sol, (double*)sol, max_iter, &iter, tol,
+        //         &relres_norm, magma_config.queue);
+        //     break;
+
+        // case 2:
+        //     rls::solver::lsqr::run_tf32<float>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                         &relres_norm, magma_config.queue);
+        //     break;
+
+        // case 3:
+        //     rls::solver::lsqr::run<__half>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                             &relres_norm, magma_config.queue);
+        //     break;
+
+        // case 4:
+        //     rls::solver::lsqr::run<float>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                         &relres_norm, magma_config.queue);
+        //     break;
+
+        // case 5:
+        //     rls::solver::lsqr::run_tf32<float>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                         &relres_norm, magma_config.queue);
+        //     break;
+
+        // case 6:
+        //     rls::solver::lsqr::run<__half>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                             &relres_norm, magma_config.queue);
+        //     break;
+
+        // default:
+        //     rls::solver::lsqr::run<double>(num_rows, num_cols, dmtx, rhs, init_sol, sol, max_iter, &iter, tol,
+        //                         &relres_norm, magma_config.queue);
+        //     break;
+        }
+    }
+    else {
+        switch (precision_parser(args[first_index], args[first_index + 1]))
+        {
+        case 0:
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<double>(num_rows, num_cols, (double*)dmtx, (double*)rhs, (double*)init_sol, (double*)sol,
+                            max_iter, &iter, tol, &relres_norm, (double*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::utils::finalize_with_precond((double*)mtx, (double*)dmtx, (double*)init_sol, (double*)sol, (double*)rhs, (double*)precond_mtx, magma_config);
+            break;
+        case 1:
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<float>(num_rows, num_cols, (double*)dmtx, (double*)rhs, (double*)init_sol, (double*)sol,
+                            max_iter, &iter, tol, &relres_norm, (double*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::utils::finalize_with_precond((double*)mtx, (double*)dmtx, (double*)init_sol, (double*)sol, (double*)rhs, (double*)precond_mtx, magma_config);
+            break;
+
+        case 2:
+            rls::detail::use_tf32_math_operations(magma_config);
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<float>(num_rows, num_cols, (double*)dmtx, (double*)rhs, (double*)init_sol, (double*)sol,
+                            max_iter, &iter, tol, &relres_norm, (double*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::detail::disable_tf32_math_operations(magma_config);
+            rls::utils::finalize_with_precond((double*)mtx, (double*)dmtx, (double*)init_sol, (double*)sol, (double*)rhs, (double*)precond_mtx, magma_config);
+            break;
+
+        case 3:
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<__half>(num_rows, num_cols, (double*)dmtx, (double*)rhs, (double*)init_sol, (double*)sol,
+                            max_iter, &iter, tol, &relres_norm, (double*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::utils::finalize_with_precond((double*)mtx, (double*)dmtx, (double*)init_sol, (double*)sol, (double*)rhs, (double*)precond_mtx, magma_config);
+            break;
+
+        case 4:
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<float, float, magma_int_t>(num_rows, num_cols, (float*)dmtx, (float*)rhs, (float*)init_sol, (float*)sol,
+                            max_iter, &iter, tol, &relres_norm, (float*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::utils::finalize_with_precond((float*)mtx, (float*)dmtx, (float*)init_sol, (float*)sol, (float*)rhs, (float*)precond_mtx, magma_config);
+            break;
+
+        case 5:
+            rls::detail::use_tf32_math_operations(magma_config);
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<float, float, magma_int_t>(num_rows, num_cols, (float*)dmtx, (float*)rhs, (float*)init_sol, (float*)sol,
+                            max_iter, &iter, tol, &relres_norm, (float*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::detail::disable_tf32_math_operations(magma_config);
+            rls::utils::finalize_with_precond((float*)mtx, (float*)dmtx, (float*)init_sol, (float*)sol, (float*)rhs, (float*)precond_mtx, magma_config);
+            break;
+
+        case 6:
+            // t = magma_sync_wtime(magma_config.queue);
+            rls::solver::lsqr::run<__half, float, magma_int_t>(num_rows, num_cols, (float*)dmtx, (float*)rhs, (float*)init_sol, (float*)sol,
+                            max_iter, &iter, tol, &relres_norm, (float*)precond_mtx,
+                            sampled_rows, magma_config.queue, &t_solve);
+            // t_solve = magma_sync_wtime(magma_config.queue) - t;
+            rls::utils::finalize_with_precond((float*)mtx, (float*)dmtx, (float*)init_sol, (float*)sol, (float*)rhs, (float*)precond_mtx, magma_config);
+            break;
+
+        default:
+            std::cout << "No option specified for solver.\n";
+            break;
+        }
+    }
+    // t = clock() - t;
+    // t_solve = ((double)t) / ((double)CLOCKS_PER_SEC);
+
+    // Runs for measuring r
+}
+
+void lsqr::print_runtime_info() {
+    std::cout << "inputs:" << '\n';
+    std::cout << "=======\n";
+    std::cout << "         precond precision: " << args[1] << '\n';
+    std::cout << "internal precond precision: " << args[2] << '\n';
+    std::cout << "          solver precision: " << args[3] << '\n';
+    std::cout << " solver internal precision: " << args[4] << '\n';
+    std::cout << "                    matrix: " << args[5] << '\n';
+    std::cout << "                       rhs: " << args[6] << '\n';
+    std::cout << "      sampling coefficient: " << sampling_coeff << '\n' << '\n';
+
+    std::cout << "runtimes:\n";
+    std::cout << "=========\n";
+    std::cout << "         warmup iterations: " << warmup_iters << '\n';
+    std::cout << "        runtime iterations: " << runtime_iters << '\n';
+    std::cout << "          precond time_avg: " << t_precond_avg << '\n';
+    std::cout << "            solve time_avg: " << t_solve_avg << '\n';
+    std::cout << "            total time_avg: " << t_total_avg << '\n';
+    std::cout << "                      iter: " << iter << '\n';
+    std::cout << "                relres_avg: " << relres_norm_avg << '\n';
+    std::cout << "      sampling coefficient: " << sampling_coeff << '\n';
+    std::cout << "              sampled rows: " << sampled_rows << '\n';
+    std::cout << "               output file: " << filename_out << '\n';
+
+}
+
+void lsqr::write_output() {
+    rls::io::write_output((char*)filename_out.c_str(), num_rows,
+                                    num_cols, max_iter, sampling_coeff,
+                                    sampled_rows, t_precond_avg, t_solve_avg, t_total_avg,
+                                    iter, relres_norm_avg);
+}
+
+void lsqr::run() {
+    filename_out = args[9];
+    warmup_iters = std::atoi(args[10].c_str());
+    runtime_iters = std::atoi(args[11].c_str());
+
+    // Warmup runs.
+    for (auto i = 0; i < warmup_iters; i++) {
+        dispatch_preconditioner();
+        dispatch_solver();
+        std::cout << "  warmup -> t_precond: " << t_precond << '\n';
+        std::cout << "  warmup ->   t_solve: " << t_solve << '\n';
+    }
+
+    // Runtime measuring runs.
+    t_precond_avg = 0.0;
+    t_solve_avg = 0.0;
+    for (auto i = 0; i < runtime_iters; i++) {
+        t_precond = 0.0;
+        t_solve = 0.0;
+        dispatch_preconditioner();
+        dispatch_solver();
+        t_precond_avg += t_precond;
+        t_solve_avg += t_solve;
+        std::cout << "  t_precond: " << t_precond << '\n';
+        std::cout << "    t_solve: " << t_solve << '\n';
+        std::cout << "t_solve_avg: " << t_solve_avg << '\n';
+        relres_norm_avg += relres_norm;
+    }
+    t_precond_avg /= runtime_iters;
+    t_solve_avg /= runtime_iters;
+    relres_norm_avg /= runtime_iters;
+    t_total_avg = t_precond_avg + t_solve_avg; 
+}
+
+void lsqr::initialize() {
+    rls::detail::configure_magma(magma_config);
+}
+
+void lsqr::finalize() {
+    cudaStreamDestroy(magma_config.cuda_stream);
+    cublasDestroy(magma_config.cublas_handle);
+    cusparseDestroy(magma_config.cusparse_handle);
+    curandDestroyGenerator(magma_config.rand_generator);
+    magma_queue_destroy(magma_config.queue);
+    magma_finalize();
+}
+
+int main(int argc, char* argv[])
+{
+    lsqr solver;
+    solver.args.assign(argv + 1, argv + argc);
+    solver.initialize();
+    solver.run();
+    solver.print_runtime_info();
+    solver.write_output();
+    solver.finalize();
+    return 0;
+}
