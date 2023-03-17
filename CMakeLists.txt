@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.13.11)
-project(mix_n_pick LANGUAGES CXX C CUDA VERSION 1.0)
+project(randls LANGUAGES CXX C CUDA VERSION 1.0)
 enable_language(CUDA)
 set(CMAKE_CXX_FLAGS "-Wall -std=c++11")
 
 # build .so
 
-add_library(mix_n_pick SHARED
+add_library(randls SHARED
             cuda/preconditioner/preconditioner_kernels.cu
             cuda/solver/lsqr_kernels.cu
             core/solver/lsqr.cpp
@@ -15,24 +15,24 @@ add_library(mix_n_pick SHARED
             core/memory/memory.cpp
             core/preconditioner/gaussian.cpp
 )
-target_include_directories(mix_n_pick PUBLIC
+target_include_directories(randls PUBLIC
     .
     ../
     include/
     ${MAGMA_INC}
     ${CUDA_INC}
-    ${RBPIK_INC}
+    ${RANDLS_INC}
 )
 
 # set those here or while configuring cmake 
-set_property(TARGET mix_n_pick
+set_property(TARGET randls
              PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-set_property(TARGET mix_n_pick
+set_property(TARGET randls
              PROPERTY CUDA_STANDARD 11)
 set(MAGMA_INC )
 set(CUDA_INC )
-set_target_properties(mix_n_pick PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(mix_n_pick
+set_target_properties(randls PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(randls
     -std=c++11 ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lcudart -lcurand
 )
 enable_language(CUDA)
@@ -54,7 +54,7 @@ target_include_directories(mmio PUBLIC
 
 add_executable(run_lsqr runners/run_lsqr.cpp)
 add_dependencies(run_lsqr mmio)
-add_dependencies(run_lsqr mix_n_pick)
+add_dependencies(run_lsqr randls)
 target_include_directories(run_lsqr PUBLIC
     .
     ../
@@ -70,5 +70,5 @@ set_target_properties(run_lsqr PROPERTIES
     LINKER_LANGUAGE CUDA)
 
 target_link_libraries(run_lsqr
-    -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand
+    -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lrandls -lmmio -lcudart -lcurand
 )
