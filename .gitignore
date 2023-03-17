@@ -33,3 +33,7 @@ scripts/slurm*
 build_old/*
 plots/*
 log/*
+
+.gitignore
+.vscode
+.clang-format
