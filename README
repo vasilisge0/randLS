@@ -1,0 +1,69 @@
+randLS contains a C++ implementation of a randomized mixed precision
+preconditioner for the LSQR solver.
+
+This work was published under the title, "A Mixed Precision Randomized
+Preconditioner for the LSQR solver on GPUs" at ISC23; It is an attempt to
+investigate the effect that mixed precision computations have on randomized
+preconditioners, while at the same time attaining modest runtime savings.
+
+MAGMA[1] is used for performing BLAS on the GPU, cudaRand[2] for
+generating random samples and custom cuda kernels for conversions between
+precisions.
+
+A simple configuration of the project can be achieved by running the following
+script at the root directory of the project:
+
+cmake \
+    -DMAGMA_INC="path-to-magma-include" \
+    -DCUDA_INC="path-to-cuda-include" \
+    -DMAKE_CUDA_ARCHITECTURES=80 \ # gpu architecture is set to AMPERE
+    -DMAGMA_LIB="path-to-magma-lib" \
+    -DRANDLS_LIB="path-to-magma-lib" \
+    -G "Unix Makefiles" \
+    -S -B build
+
+then build with:
+
+cd build; make
+
+The experiments with matrices HGDP_1, HGDP_2, CIFAR_1, CIFAR_2.
+
+
+cd build;
+./run_lsqr ${tol}                  \
+           ${precond_precision}    \
+           ${precond_precision_in} \
+           ${solver_precision}     \
+           ${solver_precision_in}  \
+           ${in_mtx_filename}      \
+           ${in_rhs_filehaname}    \
+           precond                 \
+           ${sampling_coeff}       \
+           ${out_file}             \
+           ${warmup_iters}         \
+           ${runtime_iters}
+
+
+                 tol: LSQR tolerance
+   precond_precision: high precision used for preconditioner.
+precond_precision_in: low precision used for preconditioner.
+    solver_precision: high precision used for solver.
+ solver_precision_in: low precision used for solver.
+     in_mtx_filename: filename of input matrix
+     in_rhs_filename: filename of input rhs
+             precond: use this to run lsqr with preconditioner
+             samples: signifies the rows of the sketch matrix as sampling_coeff * num_cols_A
+            out_file: filename of output file, containing the runtimes.
+        warmup_iters: number of iterations used for warmup.
+       runtime_iters: numer of iterations used for measuring runtime.
+
+
+CUDA 11.4.4, gcc 11.3.0 and MAGMA 2.6.2 and cmake 3.25.1 were used.
+
+
+[1]. Tomov, S., Dongarra, J., Baboulin, M.: Towards dense linear algebra for
+ hybrid GPU accelerated manycore systems. Parallel Computing 36(5-6), 232–240
+(Jun 2010), 10.1016/j.parco.2009.12.005
+
+[2]. cuRand: https://docs.nvidia.com/cuda/curand/index.html
+
