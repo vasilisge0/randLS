@@ -255,14 +255,16 @@ void initialize_with_precond(std::string filename_mtx, std::string filename_rhs,
     cudaDeviceSynchronize();
 
     // Generates preconditioner.
-    value_type* dt = nullptr;
-    memory::malloc(&dt, sampled_rows * num_cols);
-    preconditioner::gaussian::generate<value_type_in>(
-        sampled_rows, num_rows, sketch_mtx, sampled_rows, num_rows, num_cols,
-        *dmtx, num_rows, *precond_mtx, sampled_rows, dt, magma_config,
-        t_precond, t_mm, t_qr);
-    memory::free(dt);
+    auto precond_state = new preconditioner::gaussian::state<value_type_in, value_type,
+        index_type>();
+    precond_state->allocate(num_rows, num_cols, sampled_rows, num_rows, sampled_rows,
+        sampled_rows);
+    // preconditioner::gaussian::generate(
+    //     sampled_rows, num_rows, sketch_mtx, sampled_rows, num_rows, num_cols,
+    //     *dmtx, num_rows, *precond_mtx, sampled_rows, precond_state, magma_config,
+    //     t_precond, t_mm, t_qr);
     memory::free(sketch_mtx);
+    precond_state->free();
 
     *num_rows_io = num_rows;
     *num_cols_io = num_cols;
