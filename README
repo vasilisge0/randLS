@@ -4,7 +4,8 @@ preconditioner for the LSQR solver.
 This work was published under the title, "A Mixed Precision Randomized
 Preconditioner for the LSQR solver on GPUs" at ISC23; It is an attempt to
 investigate the effect that mixed precision computations have on randomized
-preconditioners, while at the same time attaining modest runtime savings.
+preconditioners for least squares solvers, while at the same time attaining
+modest runtime savings.
 
 MAGMA[1] is used for performing BLAS on the GPU, cudaRand[2] for
 generating random samples and custom cuda kernels for conversions between
