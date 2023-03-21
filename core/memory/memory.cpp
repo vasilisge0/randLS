@@ -4,7 +4,7 @@
 
 #include "cublas_v2.h"
 #include "cuda_fp16.h"
-#include "detail.hpp"
+#include "magma_context.hpp"
 #include "magma_lapack.h"
 #include "magma_v2.h"
 

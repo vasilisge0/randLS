@@ -5,7 +5,7 @@
 #include <time.h>
 
 
-#include "core/detail.hpp"
+#include "core/magma_context.hpp"
 #include "core/memory.hpp"
 #include "cuda/kernels.hpp"
 #include "utils/io.hpp"

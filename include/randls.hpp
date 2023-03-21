@@ -13,7 +13,7 @@
 #include "../cuda/preconditioner/preconditioner_kernels.cuh"
 #include "../core/preconditioner/preconditioner.hpp"
 #include "../core/preconditioner/gaussian.hpp"
-#include "../core/memory/detail.hpp"
+#include "../core/memory/magma_context.hpp"
 #include "../core/solver/lsqr.hpp"
 #include "../cuda/solver/lsqr_kernels.cuh"
 #include "../core/dense/dense.hpp"

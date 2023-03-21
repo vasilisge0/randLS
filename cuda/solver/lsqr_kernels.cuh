@@ -1,7 +1,7 @@
 #ifndef CUDA_KERNELS
 #define CUDA_KERNELS
 
-#include "../../core/memory/detail.hpp"
+#include "../../core/memory/magma_context.hpp"
 
 
 namespace rls {
@@ -37,7 +37,7 @@ void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             detail::magma_info& info);
+                             std::shared_ptr<MagmaConfig> info);
 
 template <typename value_type_internal, typename value_type,
           typename index_type>
@@ -47,7 +47,7 @@ void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             detail::magma_info& info);
+                             std::shared_ptr<MagmaConfig> info);
 
 template <typename value_type_internal, typename value_type,
           typename index_type>
@@ -57,7 +57,7 @@ void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             detail::magma_info& info, double* runtime);
+                             std::shared_ptr<MagmaConfig> info);
 
 void generate_preconditioner_half(magma_int_t size_sketch[2],
                                   magmaDouble_ptr sketch,

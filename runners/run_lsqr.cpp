@@ -72,8 +72,7 @@ int main(int argc, char* argv[]) {
     std::cout << "   input_warmup_iters: " << input_warmup_iters << '\n';
     std::cout << "  input_runtime_iters: " << input_runtime_iters << '\n';
 
-    rls::detail::magma_info magma_config;
-    rls::detail::configure_magma(magma_config);
+    auto context = std::share(rls::MagmaContext:;create());
 
     double tol = std::atof(input_tol.c_str());
     double sampling_coeff = std::atof(input_num_samples.c_str());
@@ -198,5 +197,6 @@ int main(int argc, char* argv[]) {
     std::cout << "\n\n\n\n";
     std::cout << "run: \n";
     solver->run();
+    rls::detail::destroy_magma(magma_config);
     return 0;
 }

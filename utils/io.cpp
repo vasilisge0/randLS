@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include <string>
 
-#include "../core/memory/detail.hpp"
+#include "../core/memory/magma_context.hpp"
 
 #include <iostream>
 

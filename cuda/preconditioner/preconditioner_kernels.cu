@@ -9,7 +9,7 @@
 
 
 #include "../../core/blas/blas.hpp"
-#include "../../core/memory/detail.hpp"
+#include "../../core/memory/magma_context.hpp"
 #include "../../core/memory/memory.hpp"
 
 
@@ -27,6 +27,7 @@ __host__ void generate_gaussian_sketch(magma_int_t num_rows,
 {
     curandGenerateNormalDouble(rand_generator, sketch_mtx, num_rows * num_cols,
                                0, 1);
+    cudaDeviceSynchronize();
 }
 
 __host__ void generate_gaussian_sketch(magma_int_t num_rows,
@@ -34,6 +35,7 @@ __host__ void generate_gaussian_sketch(magma_int_t num_rows,
                                        curandGenerator_t rand_generator)
 {
     curandGenerateNormal(rand_generator, sketch_mtx, num_rows * num_cols, 0, 1);
+    cudaDeviceSynchronize();
 }
 
 template <typename index_type>
@@ -144,7 +146,7 @@ __host__ void demote(index_type num_rows, index_type num_cols, value_type* mtx,
                     (num_cols + threads_per_block.y - 1) / threads_per_block.y);
     demote_kernel<<<num_blocks, threads_per_block>>>(num_rows, num_cols, mtx,
                                                      ld_mtx, mtx_rp, ld_mtx_rp);
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 }
 
 template <typename value_type_in, typename value_type, typename index_type>
@@ -158,6 +160,7 @@ __host__ void promote(index_type num_rows, index_type num_cols,
                     (num_cols + threads_per_block.y - 1) / threads_per_block.y);
     promote_kernel<<<num_blocks, threads_per_block>>>(
         num_rows, num_cols, mtx, ld_mtx, mtx_ip, ld_mtx_ip);
+    cudaDeviceSynchronize();
 }
 
 

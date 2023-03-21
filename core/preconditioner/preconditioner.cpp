@@ -50,38 +50,5 @@ void generic_preconditioner::generate() {
 
 }
 
-// template <typename value_type_in, typename value_type, typename index_type>
-// void preconditioner<value_type_in, value_type, index_type>::generate(matrix::dense<value_type>* mtx) {
-    // if (this->type == Gaussian) {
-        // auto this_precond = dynamic_cast<gaussian<value_type_in, value_type, index_type>*>(this);
-        // this_precond->generate(mtx);
-    // }
-// }
-// 
-// template <typename value_type_in, typename value_type, typename index_type>
-// void preconditioner<value_type_in, value_type, index_type>::test() {
-// 
-// }
-
-void generic_preconditioner::test() {
-    std::cout << "testing\n";
-}
-
-// template <typename value_type_in, typename value_type, typename index_type>
-// void preconditioner<value_type_in, value_type, index_type>::generate(matrix::dense<value_type>* mtx) {
-//     if (this->type == Gaussian) {
-//         auto this_precond = dynamic_cast<gaussian<value_type_in, value_type, index_type>*>(this);
-//         this_precond->generate(mtx);
-//     }
-// }
-
-// template <typename value_type_in, typename value_type, typename index_type>
-// void preconditioner<value_type_in, value_type, index_type>::generate(matrix::dense<value_type>* mtx) {
-    // if (this->type == Gaussian) {
-        // auto this_precond = dynamic_cast<gaussian<value_type_in, value_type, index_type>*>(this);
-        // this_precond->generate(mtx);
-    // }
-// }
-
 }
 }

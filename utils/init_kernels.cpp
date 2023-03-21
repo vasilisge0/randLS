@@ -6,7 +6,7 @@
 // // 
 // // #include "../include/base_types.hpp"
 // // #include "../core/preconditioner/gaussian.hpp"
-// // #include "../core/memory/detail.hpp"
+// // #include "../core/memory/magma_context.hpp"
 // // #include "../core/memory/memory.hpp"
 // // #include "../core/solver/lsqr.hpp"
 // // #include "../cuda/solver/lsqr_kernels.cuh"

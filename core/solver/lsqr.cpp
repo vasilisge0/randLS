@@ -17,6 +17,7 @@
 #include "solver.hpp"
 
 #include "../../utils/io.hpp"
+#include "../../cuda/solver/lsqr_kernels.cuh"
 
 
 namespace rls {
@@ -43,6 +44,8 @@ void precond_apply(magma_trans_t trans, magma_int_t num_rows,
                    double* precond_mtx, magma_int_t ld, double* u_vector,
                    magma_int_t inc_u, magma_queue_t queue)
 {
+    std::cout << "num_rows: " << num_rows << ", ld: " << ld << ", inc_u: " << inc_u << '\n';
+    cudaDeviceSynchronize();
     blas::trsv(MagmaUpper, trans, MagmaNonUnit, num_rows, precond_mtx, ld,
                u_vector, inc_u, queue);
 }
@@ -237,15 +240,13 @@ void initialize(dim2 size, value_type* mtx, value_type* rhs,
     }
 
     // double t = magma_sync_wtime(queue);
-    scalars->beta = blas::norm2(1, rhs, vectors->inc, queue);
+    scalars->beta = blas::norm2(num_rows, rhs, vectors->inc, queue);
     std::cout << "scalars->beta: " << scalars->beta << '\n';
+    std::cout << "vectors->inc: " << vectors->inc << '\n';
     blas::copy(num_rows, rhs, vectors->inc, vectors->u, vectors->inc, queue);
     blas::scale(num_rows, 1 / scalars->beta, vectors->u, vectors->inc,
         queue);
-    std::cout << "uvector\n";
-    rls::io::print_mtx_gpu(1, 1, (double*)vectors->u, 1, queue);
 
-    std::cout << "after blas\n";
     if (!std::is_same<value_type_in, value_type>::value) {
         cuda::demote(num_rows, 1, vectors->u, num_rows,
                      vectors->u_in, num_rows);
@@ -261,19 +262,30 @@ void initialize(dim2 size, value_type* mtx, value_type* rhs,
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows, vectors->u,
                vectors->inc, 0.0, vectors->v, vectors->inc, queue);
     }
-    std::cout << "vvector\n";
-    rls::io::print_mtx_gpu(1, 1, (double*)vectors->v, 1, queue);
+    std::cout << "v[0]\n";
+    rls::io::print_mtx_gpu(10, 1, (double*)vectors->v, num_cols, queue);
+    // value_type one = 0.0;
+    // cuda::set_values(num_cols, one, vectors->v);
+    std::cout << "before apply\n";
+    cudaDeviceSynchronize();
+    auto P = precond->get_values();
+magma_int_t ld_precond = 1500;
+    io::write_mtx("precond_mtx2.mtx", ld_precond, num_cols, (double*)precond->get_values(), ld_precond, queue);
+    io::write_mtx("v2.mtx", num_cols, 1, (double*)vectors->v, num_cols, queue); 
+    precond_apply(MagmaTrans, num_cols, P, 1500, vectors->v, 1, queue);
+    // precond->apply(MagmaTrans, vectors->v, vectors->inc);
+    cudaDeviceSynchronize();
 
 
-    std::cout << "after\n";
-    std::cout << "num_rows: " << num_rows << '\n';
-    precond->apply(MagmaNoTrans, vectors->v, vectors->inc);
+    std::cout << "(after) v[0]\n";
+    rls::io::print_mtx_gpu(10, 1, (double*)vectors->v, num_cols, queue);
+
     scalars->alpha = blas::norm2(num_cols, vectors->v, vectors->inc, queue);
     std::cout << "scalars->alpha: " << scalars->alpha << '\n';
     blas::scale(num_cols, 1 / scalars->alpha, vectors->v, vectors->inc,
         queue);
     blas::copy(num_cols, vectors->v, vectors->inc, vectors->w,
-    vectors->inc, queue);
+        vectors->inc, queue);
     scalars->phi_bar = scalars->beta;
     scalars->rho_bar = scalars->alpha;
     // *t_solve += (magma_sync_wtime(queue) - t);
@@ -508,8 +520,8 @@ void lsqr<value_type_in, value_type, index_type>::step_1(
     auto num_rows = size[0];
     auto num_cols = size[1];
     // compute new u_vector
-    blas::scale(num_rows, scalars->alpha, vectors->u, inc, this.queue);
-    blas::copy(num_cols, vectors->v, inc, vectors->temp, inc, this.queue);
+    blas::scale(num_rows, scalars->alpha, vectors->u, inc, queue);
+    blas::copy(num_cols, vectors->v, inc, vectors->temp, inc, queue);
     // precond.apply(MagmaNoTrans, vectors->temp, inc);
     if (!std::is_same<value_type_in, value_type>::value) {
         cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
@@ -519,16 +531,16 @@ void lsqr<value_type_in, value_type, index_type>::step_1(
         cudaDeviceSynchronize();
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
                    num_rows, vectors->temp_in, inc, -1.0, vectors->u_in, inc,
-                   this.queue);
+                   queue);
         cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u,
                       num_rows);
         cudaDeviceSynchronize();
     } else {
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, mtx, num_rows,
-                   vectors->temp, inc, -1.0, vectors->u, inc, this.queue);
+                   vectors->temp, inc, -1.0, vectors->u, inc, queue);
     }
-    scalars->beta = blas::norm2(num_rows, vectors->u, inc, this.queue);
-    blas::scale(num_rows, 1 / scalars->beta, vectors->u, inc, this.queue);
+    scalars->beta = blas::norm2(num_rows, vectors->u, inc, queue);
+    blas::scale(num_rows, 1 / scalars->beta, vectors->u, inc, queue);
 
     // compute new v_vector
     if (!std::is_same<value_type_in, value_type>::value) {
@@ -539,24 +551,133 @@ void lsqr<value_type_in, value_type, index_type>::step_1(
         cudaDeviceSynchronize();
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
                    num_rows, vectors->u_in, inc, 0.0, vectors->temp_in, inc,
-                   this.queue);
+                   queue);
         cuda::promote(num_rows, 1, vectors->temp_in, num_rows, vectors->temp,
                       num_rows);
         cudaDeviceSynchronize();
     } else {
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows,
-                   vectors->u, inc, 0.0, vectors->temp, inc, this.queue);
+                   vectors->u, inc, 0.0, vectors->temp, inc, queue);
     }
 
     // precond.apply(MagmaTrans, vectors->temp, inc);
     blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1,
-               this.queue);
-    scalars->alpha = blas::norm2(num_cols, vectors->temp, inc, this.queue);
+               queue);
+    scalars->alpha = blas::norm2(num_cols, vectors->temp, inc, queue);
 
-    blas::scale(num_cols, 1 / scalars->alpha, vectors->temp, inc, this.queue);
-    blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, this.queue);
+    blas::scale(num_cols, 1 / scalars->alpha, vectors->temp, inc, queue);
+    blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, queue);
 }
 
+// template <typename value_type_in, typename value_type, typename index_type>
+// void step_1(matrix::dense<value_type>* mtx_in,
+//             preconditioner::preconditioner<value_type_in, value_type,
+//                                            index_type>* precond,
+//             temp_scalars<value_type, index_type>* scalars,
+//             temp_vectors<value_type_in, value_type, index_type>* vectors,
+//             magma_queue_t queue)
+// {
+//     std::cout << "inside step1" << '\n';
+//     index_type inc = 1;
+//     auto size = mtx_in->get_size();
+//     auto mtx = mtx_in->get_values();
+//     auto num_rows = size[0];
+//     auto num_cols = size[1];
+//     // compute new u_vector
+//     blas::scale(num_rows, scalars->alpha, vectors->u, inc, queue);
+//     blas::copy(num_cols, vectors->v, inc, vectors->temp, inc, queue);
+//     cudaDeviceSynchronize();
+
+//     std::cout << "temp (before)\n";
+//     rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+
+//     auto P = precond->get_values();
+//     rls::io::print_mtx_gpu(10, 10, (double*)P, 1500, queue);
+//     std::cout << "num_cols: " << num_cols << '\n';
+//     cudaDeviceSynchronize();
+//     // precond_apply(MagmaNoTrans, num_cols, P, 1500, vectors->temp, num_cols, queue);
+//     precond->apply(MagmaNoTrans, vectors->temp, inc);
+
+//     std::cout << "temp (after)\n";
+//     cudaDeviceSynchronize();
+//     rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+
+//     if (!std::is_same<value_type_in, value_type>::value) {
+//         cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
+//             num_rows);
+//         cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in, num_rows);
+//         cudaDeviceSynchronize();
+//         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
+//             num_rows, vectors->temp_in, inc, -1.0, vectors->u_in, inc, queue);
+//         cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u,
+//             num_rows);
+//         cudaDeviceSynchronize();
+//     }
+//     else {
+//         std::cout << "u (before)\n";
+//         rls::io::print_mtx_gpu(10, 1, (double*)vectors->u, num_rows, queue);
+//         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, mtx, num_rows,
+//             vectors->temp, inc, -1.0, vectors->u, inc, queue);
+//     }
+//     scalars->beta = blas::norm2(num_rows, vectors->u, inc, queue);
+//     std::cout << "beta-after-step1: " << scalars->beta << '\n';
+//     std::cout << "u (after)\n";
+//     rls::io::print_mtx_gpu(10, 1, (double*)vectors->u, num_rows, queue);
+//     blas::scale(num_rows, 1.0 / scalars->beta, vectors->u, inc, queue);
+
+//     // compute new v_vector
+//     if (!std::is_same<value_type_in, value_type>::value) {
+//         cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in,
+//                      num_rows);
+//         cuda::demote(num_rows, 1, vectors->temp, num_rows,
+//                      vectors->temp_in, num_rows);
+//         cudaDeviceSynchronize();
+//         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
+//         num_rows, vectors->u_in,
+//                inc, 0.0, vectors->temp_in, inc, queue);
+//         cuda::promote(num_rows, 1, vectors->temp_in,
+//             num_rows, vectors->temp, num_rows);
+//         cudaDeviceSynchronize();
+//     }
+//     else {
+//         std::cout << "temp (before)\n";
+//         rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+//         std::cout << "inc: " << inc << '\n';
+//         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows,
+//             vectors->u, inc, 0.0, vectors->temp, inc, queue);
+//         std::cout << "temp (after)\n";
+//         rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+//     }
+
+//     std::cout << "temp (before)\n";
+//     cudaDeviceSynchronize();
+//     rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+//     cudaDeviceSynchronize();
+//     precond->apply(MagmaNoTrans, vectors->temp, inc);
+//     cudaDeviceSynchronize();
+//     precond_apply(MagmaTrans, num_cols, P, 1500, vectors->temp, num_cols, queue);
+//     cudaDeviceSynchronize();
+//     std::cout << "temp (after)\n";
+//     cudaDeviceSynchronize();
+//     rls::io::print_mtx_gpu(10, 1, (double*)vectors->temp, num_cols, queue);
+//     blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1,
+//         queue);
+//     cudaDeviceSynchronize();
+//     scalars->alpha = blas::norm2(num_cols, vectors->temp, inc, queue);
+//     std::cout << "alpha-after-step1: " << scalars->alpha << '\n';
+
+//     blas::scale(num_cols, 1 / scalars->alpha, vectors->temp, inc, queue);
+//     blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, queue);
+// }
+
+
+// Step 1 of preconditioned LSQR.
+// template <typename value_type_in, typename value_type, typename index_type>
+// void step_1(index_type num_rows, index_type num_cols, value_type* mtx,
+            // value_type* precond_mtx, index_type ld_precond,
+            // temp_scalars<value_type, index_type>* scalars,
+            // temp_vectors<value_type_in, value_type, index_type>* vectors,
+            // magma_queue_t queue)
 template <typename value_type_in, typename value_type, typename index_type>
 void step_1(matrix::dense<value_type>* mtx_in,
             preconditioner::preconditioner<value_type_in, value_type,
@@ -565,59 +686,64 @@ void step_1(matrix::dense<value_type>* mtx_in,
             temp_vectors<value_type_in, value_type, index_type>* vectors,
             magma_queue_t queue)
 {
-    std::cout << "inside step1" << '\n';
-    index_type inc = 1;
-    auto size = mtx_in->get_size();
+    auto num_rows = mtx_in->get_size()[0];
+    auto num_cols = mtx_in->get_size()[1];
+    index_type ld_precond = precond->get_size()[0];
+    auto precond_mtx = precond->get_values();
     auto mtx = mtx_in->get_values();
-    auto num_rows = size[0];
-    auto num_cols = size[1];
+
+    index_type inc = 1;
     // compute new u_vector
     blas::scale(num_rows, scalars->alpha, vectors->u, inc, queue);
+    // magma_queue_sync(queue);
     blas::copy(num_cols, vectors->v, inc, vectors->temp, inc, queue);
     precond->apply(MagmaNoTrans, vectors->temp, inc);
+    // magma_queue_sync(queue);
     if (!std::is_same<value_type_in, value_type>::value) {
         cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
-        num_rows); cuda::demote(num_rows, 1, vectors->u, num_rows,
-        vectors->u_in, num_rows); cudaDeviceSynchronize();
+                     num_rows);
+        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in, num_rows);
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
-        num_rows,
-                   vectors->temp_in, inc, -1.0, vectors->u_in, inc, queue);
-        cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u,
-        num_rows); cudaDeviceSynchronize();
-    }
-    else {
+                   num_rows, vectors->temp_in, inc, -1.0, vectors->u_in, inc,
+                   queue);
+        // magma_queue_sync(queue);
+        cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u, num_rows);
+    } else {
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, mtx, num_rows,
-        vectors->temp,
-               inc, -1.0, vectors->u, inc, queue);
+                   vectors->temp, inc, -1.0, vectors->u, inc, queue);
+        // magma_queue_sync(queue);
     }
     scalars->beta = blas::norm2(num_rows, vectors->u, inc, queue);
     blas::scale(num_rows, 1 / scalars->beta, vectors->u, inc, queue);
+    // magma_queue_sync(queue);
 
     // compute new v_vector
     if (!std::is_same<value_type_in, value_type>::value) {
-        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in,
+        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in, num_rows);
+        cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
                      num_rows);
-        cuda::demote(num_rows, 1, vectors->temp, num_rows,
-                     vectors->temp_in, num_rows);
-        cudaDeviceSynchronize();
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
-        num_rows, vectors->u_in,
-               inc, 0.0, vectors->temp_in, inc, queue);
-        cuda::promote(num_rows, 1, vectors->temp_in,
-            num_rows, vectors->temp, num_rows);
+                   num_rows, vectors->u_in, inc, 0.0, vectors->temp_in, inc,
+                   queue);
+        magma_queue_sync(queue);
+        cuda::promote(num_rows, 1, vectors->temp_in, num_rows, vectors->temp,
+                      num_rows);
         cudaDeviceSynchronize();
-    }
-    else {
+    } else {
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows,
-            vectors->u, inc, 0.0, vectors->temp, inc, queue);
+                   vectors->u, inc, 0.0, vectors->temp, inc, queue);
+        // magma_queue_sync(queue);
     }
 
-    precond->apply(MagmaNoTrans, vectors->temp, inc);
-    blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1,
-        queue);
+    precond->apply(MagmaTrans, vectors->temp, inc, queue);
+    // precond->apply(MagmaTrans, vectors->temp, inc);   // uses different queue apparently and causes problems
+    blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1, queue);
+    // magma_queue_sync(queue);
     scalars->alpha = blas::norm2(num_cols, vectors->temp, inc, queue);
+    // magma_queue_sync(queue);
 
     blas::scale(num_cols, 1 / scalars->alpha, vectors->temp, inc, queue);
+    // magma_queue_sync(queue);
     blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, queue);
 }
 
@@ -639,14 +765,59 @@ void lsqr<value_type_in, value_type, index_type>::step_2(
     scalars->rho_bar = -c * scalars->alpha;
     auto phi = c * (scalars->phi_bar);
     scalars->phi_bar = s * (scalars->phi_bar);
-    blas::copy(size_mtx[1], vectors->w, inc, vectors->temp, inc, this.queue);
+    blas::copy(size_mtx[1], vectors->w, inc, vectors->temp, inc, queue);
     // precond.apply(MagmaNoTrans, vectors->temp, inc);
-    blas::axpy(size_mtx[1], phi / rho, vectors->temp, 1, sol, 1, this.queue);
+    blas::axpy(size_mtx[1], phi / rho, vectors->temp, 1, sol, 1, queue);
     // compute new w_vector
-    blas::scale(size_mtx[1], -(theta / rho), vectors->w, inc, this.queue);
-    blas::axpy(size_mtx[1], 1.0, vectors->v, 1, vectors->w, 1, this.queue);
+    blas::scale(size_mtx[1], -(theta / rho), vectors->w, inc, queue);
+    blas::axpy(size_mtx[1], 1.0, vectors->v, 1, vectors->w, 1, queue);
 }
 
+// template <typename value_type_in, typename value_type, typename index_type>
+// void step_2(matrix::dense<value_type>* mtx_in,
+//             matrix::dense<value_type>* sol_in,
+//             // matrix::dense<value_type>* precond,
+//             preconditioner::preconditioner<value_type_in, value_type,
+//                                            index_type>* precond,
+//             temp_scalars<value_type, index_type>* scalars,
+//             temp_vectors<value_type_in, value_type, index_type>* vectors,
+//             magma_queue_t queue)
+// {
+//     std::cout << "in step_2\n";
+//     auto mtx = mtx_in->get_values();
+//     auto sol = sol_in->get_values();
+//     auto size_mtx = mtx_in->get_size();
+//     auto num_rows = size_mtx[0];
+//     auto num_cols = size_mtx[1];
+//     index_type inc = 1;
+//     auto rho = std::sqrt(((scalars->rho_bar) * (scalars->rho_bar) +
+//                           scalars->beta * scalars->beta));
+//     auto c = (scalars->rho_bar) / rho;
+//     auto s = scalars->beta / rho;
+//     auto theta = s * scalars->alpha;
+//     scalars->rho_bar = -c * scalars->alpha;
+//     auto phi = c * (scalars->phi_bar);
+//     scalars->phi_bar = s * (scalars->phi_bar);
+//     blas::copy(size_mtx[1], vectors->w, inc, vectors->temp, inc, queue);
+//     // precond->apply(MagmaNoTrans, size_precond[0], precond_mtx->get_values(),
+//     // size_precond[0], vectors->temp, inc, queue); precond_apply(MagmaNoTrans,
+//     // num_cols, precond_mtx, ld_precond, vectors->temp,
+//     //               inc, queue);
+//     precond->apply(MagmaNoTrans, vectors->temp, inc);
+//     blas::axpy(size_mtx[1], phi / rho, vectors->temp, 1, sol, 1, queue);
+//     // compute new w_vector
+//     blas::scale(size_mtx[1], -(theta / rho), vectors->w, inc, queue);
+//     blas::axpy(size_mtx[1], 1.0, vectors->v, 1, vectors->w, 1, queue);
+// }
+
+// Step 2 of preconditioned LSQR.
+// template <typename value_type_in, typename value_type, typename index_type>
+// void step_2(index_type num_rows, index_type num_cols, value_type* mtx,
+            // value_type* rhs, value_type* sol, value_type* precond_mtx,
+            // index_type ld_precond,
+            // temp_scalars<value_type, index_type>& scalars,
+            // temp_vectors<value_type_in, value_type, index_type>& vectors,
+            // magma_queue_t queue)
 template <typename value_type_in, typename value_type, typename index_type>
 void step_2(matrix::dense<value_type>* mtx_in,
             matrix::dense<value_type>* sol_in,
@@ -657,31 +828,33 @@ void step_2(matrix::dense<value_type>* mtx_in,
             temp_vectors<value_type_in, value_type, index_type>* vectors,
             magma_queue_t queue)
 {
-    std::cout << "in step_2\n";
+    auto num_rows = mtx_in->get_size()[0];
+    auto num_cols = mtx_in->get_size()[1];
     auto mtx = mtx_in->get_values();
     auto sol = sol_in->get_values();
-    auto size_mtx = mtx_in->get_size();
-    auto num_rows = size_mtx[0];
-    auto num_cols = size_mtx[1];
+    auto precond_mtx = precond->get_values();
+    index_type ld_precond = precond->get_size()[0];
+
     index_type inc = 1;
-    auto rho = std::sqrt(((scalars->rho_bar) * (scalars->rho_bar) +
-                          scalars->beta * scalars->beta));
+    auto rho = std::sqrt(
+        ((scalars->rho_bar) * (scalars->rho_bar) + scalars->beta * scalars->beta));
     auto c = (scalars->rho_bar) / rho;
     auto s = scalars->beta / rho;
     auto theta = s * scalars->alpha;
     scalars->rho_bar = -c * scalars->alpha;
     auto phi = c * (scalars->phi_bar);
     scalars->phi_bar = s * (scalars->phi_bar);
-    blas::copy(size_mtx[1], vectors->w, inc, vectors->temp, inc, queue);
-    // precond->apply(MagmaNoTrans, size_precond[0], precond_mtx->get_values(),
-    // size_precond[0], vectors->temp, inc, queue); precond_apply(MagmaNoTrans,
-    // num_cols, precond_mtx, ld_precond, vectors->temp,
-    //               inc, queue);
-    precond->apply(MagmaNoTrans, vectors->temp, inc);
-    blas::axpy(size_mtx[1], phi / rho, vectors->temp, 1, sol, 1, queue);
+    blas::copy(num_cols, vectors->w, inc, vectors->temp, inc, queue);
+    precond_apply(MagmaNoTrans, num_cols, precond_mtx, ld_precond, vectors->temp,
+                  inc, queue);
+    blas::axpy(num_cols, phi / rho, vectors->temp, 1, sol, 1, queue);
+    magma_queue_sync(queue);
+
     // compute new w_vector
-    blas::scale(size_mtx[1], -(theta / rho), vectors->w, inc, queue);
-    blas::axpy(size_mtx[1], 1.0, vectors->v, 1, vectors->w, 1, queue);
+    blas::scale(num_cols, -(theta / rho), vectors->w, inc, queue);
+    magma_queue_sync(queue);
+    blas::axpy(num_cols, 1.0, vectors->v, 1, vectors->w, 1, queue);
+    magma_queue_sync(queue);
 }
 
 template <typename value_type>
@@ -717,7 +890,6 @@ bool check_stopping_criteria(matrix::dense<value_type>* mtx_in,
         return false;
     }
 }
-
 
 template <typename value_type_in, typename value_type, typename index_type>
 void lsqr<value_type_in, value_type, index_type>::allocate_vectors(dim2 size)
@@ -767,23 +939,21 @@ void run_lsqr(matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
               magma_int_t max_iter, double tolerance, magma_int_t* iter,
               double* resnorm, magma_queue_t queue, double* t_solve)
 {
-    std::cout << "in run_lsqr\n";
     *t_solve = 0;
     *iter = 0;
     auto size = mtx->get_size();
     initialize(size, mtx->get_values(), rhs->get_values(), precond, scalars,
                vectors, queue, t_solve);
     double t = magma_sync_wtime(queue);
-    // while (1) {
-        std::cout << "before step1\n";
+    while (1) {
         step_1(mtx, precond, scalars, vectors, queue);
         step_2(mtx, sol, precond, scalars, vectors, queue);
-        // if (check_stopping_criteria(mtx, rhs, sol, vectors->temp,
-            // max_iter, tolerance, iter, resnorm, queue)) {
-            // std::cout << "*iter: " << *iter << ", tolerance: " << tolerance << '\n';
-            // break;
-        // }
-    // }
+        if (check_stopping_criteria(mtx, rhs, sol, vectors->temp,
+            max_iter, tolerance, iter, resnorm, queue)) {
+            std::cout << "*iter: " << *iter << ", tolerance: " << tolerance << '\n';
+            break;
+        }
+    }
     *t_solve += (magma_sync_wtime(queue) - t);
 }
 

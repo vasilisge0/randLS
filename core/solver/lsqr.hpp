@@ -170,7 +170,7 @@ public:
     lsqr(preconditioner::generic_preconditioner* precond_in,
         double tolerance_in,
         magma_queue_t& queue_in) {
-            std::cout << "lsqr constructor\n";
+        std::cout << "lsqr constructor\n";
         this->precond = precond_in;
         std::cout << "TEST [[[ set queue ]]]" << '\n';
         this->queue = queue_in;
@@ -191,10 +191,6 @@ public:
         sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         init_sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         rhs = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-
-        detail::magma_info magma_config;
-        detail::configure_magma(magma_config);
-        this->queue = magma_config.queue;
 
         // Initializes matrix and rhs.
         mtx->generate(filename_mtx, this->queue);

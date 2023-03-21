@@ -3,7 +3,7 @@
 
 #include "../dense/dense.hpp"
 #include <memory>
-#include "../memory/detail.hpp"
+#include "../memory/magma_context.hpp"
 // #include "gaussian.hpp"
 
 #include <iostream>
@@ -17,6 +17,7 @@ namespace preconditioner {
 template<typename value_type_in, typename value_type, typename index_type>
 class gaussian;
 
+
 enum PrecondValueType {
     Undefined_PrecondValueType,
     FP64_FP64,
@@ -28,25 +29,23 @@ enum PrecondValueType {
     FP16_FP32
 };
 
+
 enum PrecondType {
     Undefined_PrecondType, 
     Gaussian
 };
 
+
 class generic_preconditioner {
     protected:
-        detail::magma_info info;
-        // magma_queue_t queue;
+        std::shared_ptr<MagmaContext> context;
         PrecondValueType type_selection = Undefined_PrecondValueType;
         PrecondType type;
 
     public:
-        generic_preconditioner() {
-        }
+        generic_preconditioner() {}
 
-        PrecondValueType get_precond_valuetype() {
-            return type_selection;
-        }
+        PrecondValueType get_precond_valuetype() { return type_selection; }
 
     virtual void generate();
 
@@ -62,27 +61,21 @@ public:
 
     virtual preconditioner* get() { return this; }
 
-    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u) {
+    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u) {}
 
-    }
+    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue) {}
+
+    virtual value_type* get_values() {}
+
+    virtual dim2 get_size() {}
 
     std::shared_ptr<matrix::dense<value_type>> get_mtx() {
         return mtx;
     }
 
-    // void generate(matrix::dense<value_type>* mtx);
-    void generate(matrix::dense<value_type>* mtx) {
-        std::cout << "GENERATE PRECOND\n";
-        // if (this->type == Gaussian) {
-            // auto this_precond = dynamic_cast<gaussian<value_type_in, value_type, index_type>*>(this);
-            // auto this_precond = dynamic_cast<gaussian<double, double, magma_int_t>*>(precond);
-            // this_precond->generate(mtx);
-        // }
-    }
-
+    void generate(matrix::dense<value_type>* mtx) { }
 
     void set_type() {
-        std::cout << "TYPE in preconditioner set_type: !!!!!!!! " << '\n';
         if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
         {
             type_selection = FP64_FP64;
@@ -104,8 +97,6 @@ public:
             type_selection = FP16_FP32;
         }
     }
-
-    // virtual void generate(matrix::dense<value_type>* mtx);
 
 protected:
     std::shared_ptr<matrix::dense<value_type>> mtx;

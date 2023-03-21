@@ -23,7 +23,7 @@ target_include_directories(mix_n_pick PUBLIC
     core/solver/
     ${MAGMA_INC}
     ${CUDA_INC}
-    ${RBPIK_INC}
+    ${RANDLS_INC}
 )
 # set those here or while configuring cmake 
 set_property(TARGET mix_n_pick
@@ -43,7 +43,7 @@ set(CUDA_INC )
 #     ../cuda/
 #     include
 #     ${MAGMA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 # )
 message("MAGMA_LIB: " ${MAGMA_LIB})
 set_target_properties(mix_n_pick PROPERTIES LINKER_LANGUAGE CXX)
@@ -62,7 +62,7 @@ target_include_directories(mmio PUBLIC
     utils
     ${MAGMA_INC}
     ${CUDA_INC}
-    ${RBPIK_INC}
+    ${RANDLS_INC}
 )
 
 # run_lsqr
@@ -77,7 +77,7 @@ target_include_directories(run_lsqr PUBLIC
     include/
     ${MAGMA_INC}
     ${CUDA_INC}
-    ${RBPIK_INC}
+    ${RANDLS_INC}
 )
 set_target_properties(run_lsqr PROPERTIES 
     CXX_STANDARD 11
@@ -100,7 +100,7 @@ target_link_libraries(run_lsqr
 #     include/
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_single PROPERTIES LINKER_LANGUAGE CUDA)
@@ -122,7 +122,7 @@ target_link_libraries(run_lsqr
 #     test
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_half PROPERTIES LINKER_LANGUAGE CUDA)
@@ -144,7 +144,7 @@ target_link_libraries(run_lsqr
 #     test
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_stats PROPERTIES LINKER_LANGUAGE CUDA)
@@ -166,7 +166,7 @@ target_link_libraries(run_lsqr
 #     test
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_single_stats PROPERTIES LINKER_LANGUAGE CUDA)
@@ -188,7 +188,7 @@ target_link_libraries(run_lsqr
 #     test
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_tf32_stats PROPERTIES LINKER_LANGUAGE CUDA)
@@ -210,7 +210,7 @@ target_link_libraries(run_lsqr
 #     test
 #     ${MAGMA_INC}
 #     ${CUDA_INC}
-#     ${RBPIK_INC}
+#     ${RANDLS_INC}
 #     /software/all/devel/cuda/11.0/include
 # )
 # set_target_properties(run_lsqr_half_stats PROPERTIES LINKER_LANGUAGE CUDA)

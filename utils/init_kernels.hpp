@@ -1,7 +1,7 @@
 #ifndef TEST_KERNELS
 #define TEST_KERNELS
 
-#include "../core/memory/detail.hpp"
+#include "../core/memory/magma_context.hpp"
 
 namespace rls {
 namespace utils {
