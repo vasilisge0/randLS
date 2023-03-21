@@ -1,5 +1,5 @@
-#include <iostream>
 #include <cuda_runtime.h>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include "cublas_v2.h"
@@ -76,7 +76,9 @@ void getmatrix(magma_int_t num_rows, magma_int_t num_cols, float* source_vector,
 }
 
 template <typename value_type, typename index_type>
-void solution_initialization(index_type num_rows, value_type* init_sol, value_type* sol, magma_queue_t queue) {
+void solution_initialization(index_type num_rows, value_type* init_sol,
+                             value_type* sol, magma_queue_t queue)
+{
     index_type inc = 1;
     default_solution_initialization_kernel<<<
         num_rows / CUDA_MAX_NUM_THREADS_PER_BLOCK + 1,
@@ -85,9 +87,11 @@ void solution_initialization(index_type num_rows, value_type* init_sol, value_ty
     blas::copy(num_rows, init_sol, inc, sol, inc, queue);
 }
 
-template void solution_initialization(magma_int_t num_rows, double* init_sol, double* sol, magma_queue_t queue);
+template void solution_initialization(magma_int_t num_rows, double* init_sol,
+                                      double* sol, magma_queue_t queue);
 
-template void solution_initialization(magma_int_t num_rows, float* init_sol, float* sol, magma_queue_t queue);
+template void solution_initialization(magma_int_t num_rows, float* init_sol,
+                                      float* sol, magma_queue_t queue);
 
 
 template <typename value_type, typename index_type>
@@ -110,6 +114,36 @@ template void default_initialization(magma_queue_t queue, magma_int_t num_rows,
                                      magma_int_t num_cols, double* mtx,
                                      double* init_sol, double* sol,
                                      double* rhs);
+
+
+template <typename value_type, typename index_type>
+__global__ void set_values_1d_kernel(index_type num_elems, value_type val, value_type* values)
+{
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < num_elems) {
+        values[row] = val;
+    }
+}
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, double val, double* values);
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, float val, float* values);
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, __half val, __half* values);
+
+template <typename value_type, typename index_type>
+void set_values(index_type num_elems, value_type val, value_type* values)
+{
+    set_values_1d_kernel<<<num_elems/CUDA_MAX_NUM_THREADS_PER_BLOCK + 1,
+        CUDA_MAX_NUM_THREADS_PER_BLOCK>>>(num_elems, val, values);
+    cudaDeviceSynchronize();
+}
+
+template void set_values(magma_int_t num_elems, double val, double* values);
+
+template void set_values(magma_int_t num_elems, float val, float* values);
+
+template void set_values(magma_int_t num_elems, __half val, __half* values);
 
 
 }  // namespace cuda

@@ -24,7 +24,7 @@ void write_mtx(char* filename, magma_int_t m, magma_int_t n, double* mtx);
 
 void write_mtx(char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld, magma_queue_t queue);
 
-void print_mtx(magma_int_t m, magma_int_t n, double* mtx);
+// void print_mtx(magma_int_t m, magma_int_t n, double* mtx);
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx, magma_int_t ld);
 

@@ -13,7 +13,7 @@
 #include "../memory/memory.hpp"
 #include "base_types.hpp"
 #include "lsqr.hpp"
-
+#include "../../cuda/solver/lsqr_kernels.cuh"
 
 namespace rls {
 namespace solver {
@@ -158,11 +158,34 @@ void initialize(index_type num_rows, index_type num_cols, value_type* mtx,
                    vectors.u, vectors.inc, 0.0, vectors.v, vectors.inc, queue);
     }
 
+    std::cout << "precond_mtx[0]: \n";
+    // rls::io::print_mtx_gpu(5, 5, precond_mtx, ld_precond, queue);
+    std::cout << "\n";
+    std::cout << "vectors.v[0]: \n";
+    // rls::io::print_mtx_gpu(1, 1, vectors.v, 1, queue);
+    std::cout << "\n";
+    std::cout << "  num_cols: " << num_cols << '\n';
+    std::cout << "ld_precond: " << ld_precond << '\n';
+
+    std::cout << "vectors before: \n";
+    rls::io::print_mtx_gpu(10, 1, (double*)vectors.v, num_cols, queue);
+    value_type one = 1.0;
+    // cuda::set_values(num_cols, one, vectors.v);
+    std::cout << "precond_mtx: \n";
+    rls::io::print_mtx_gpu(10, 10, (double*)precond_mtx, ld_precond, queue);
+    io::write_mtx("precond_mtx12.mtx", ld_precond, num_cols, (double*)precond_mtx, ld_precond, queue);
+    io::write_mtx("v12.mtx", num_cols, 1, (double*)vectors.v, num_cols, queue);
+    // (!) here I use the transpose maybe this is what I need to change in polymorhic branch
     precond_apply(MagmaTrans, num_cols, precond_mtx, ld_precond, vectors.v,
                   vectors.inc, queue);
+    io::write_mtx("v12.mtx", num_cols, 1, (double*)vectors.v, num_cols, queue);
+
+    std::cout << "vectors after: \n";
+    rls::io::print_mtx_gpu(10, 1, (double*)vectors.v, num_cols, queue);
     scalars.alpha = blas::norm2(num_cols, vectors.v, vectors.inc, queue);
     std::cout << "scalars.alpha: " << scalars.alpha << '\n';
-    rls::io::print_mtx_gpu(1, 1, precond_mtx, 1, queue);
+    std::cout << "vectors.v[0]: \n";
+    // rls::io::print_mtx_gpu(1, 1, vectors.v, 1, queue);
 
     blas::scale(num_cols, 1 / scalars.alpha, vectors.v, vectors.inc, queue);
     blas::copy(num_cols, vectors.v, vectors.inc, vectors.w, vectors.inc, queue);
@@ -215,8 +238,13 @@ void step_1(index_type num_rows, index_type num_cols, value_type* mtx,
     // compute new u_vector
     blas::scale(num_rows, scalars.alpha, vectors.u, inc, queue);
     blas::copy(num_cols, vectors.v, inc, vectors.temp, inc, queue);
+    std::cout << "temp (before)\n";
+    // rls::io::print_mtx_gpu(10, 1, vectors.temp, num_cols, queue);
     precond_apply(MagmaNoTrans, num_cols, precond_mtx, ld_precond, vectors.temp,
                   inc, queue);
+    cudaDeviceSynchronize();
+    std::cout << "temp (after)\n";
+    // rls::io::print_mtx_gpu(10, 1, vectors.temp, num_cols, queue);
     if (!std::is_same<value_type_in, value_type>::value) {
         cuda::demote(num_rows, 1, vectors.temp, num_rows, vectors.temp_in,
                      num_rows);
@@ -228,10 +256,15 @@ void step_1(index_type num_rows, index_type num_cols, value_type* mtx,
         cuda::promote(num_rows, 1, vectors.u_in, num_rows, vectors.u, num_rows);
         cudaDeviceSynchronize();
     } else {
+        std::cout << "u (before)\n";
+        // rls::io::print_mtx_gpu(10, 1, vectors.u, num_cols, queue);
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, mtx, num_rows,
                    vectors.temp, inc, -1.0, vectors.u, inc, queue);
+        std::cout << "u (after)\n";
+        // rls::io::print_mtx_gpu(10, 1, vectors.u, num_cols, queue);
     }
     scalars.beta = blas::norm2(num_rows, vectors.u, inc, queue);
+    std::cout << "scalars.beta-step1: " << scalars.beta << '\n'; 
     blas::scale(num_rows, 1 / scalars.beta, vectors.u, inc, queue);
 
     // compute new v_vector
@@ -251,10 +284,17 @@ void step_1(index_type num_rows, index_type num_cols, value_type* mtx,
                    vectors.u, inc, 0.0, vectors.temp, inc, queue);
     }
 
+    cudaDeviceSynchronize();
+    std::cout << "temp (before)\n";
+    // rls::io::print_mtx_gpu(10, 1, vectors.temp, num_cols, queue);
     precond_apply(MagmaTrans, num_cols, precond_mtx, ld_precond, vectors.temp,
                   inc, queue);
+    cudaDeviceSynchronize();
+    std::cout << "temp (after)\n";
+    // rls::io::print_mtx_gpu(10, 1, vectors.temp, num_cols, queue);
     blas::axpy(num_cols, -(scalars.beta), vectors.v, 1, vectors.temp, 1, queue);
     scalars.alpha = blas::norm2(num_cols, vectors.temp, inc, queue);
+    std::cout << "scalars.alpha-step1: " << scalars.alpha << '\n'; 
 
     blas::scale(num_cols, 1 / scalars.alpha, vectors.temp, inc, queue);
     blas::copy(num_cols, vectors.temp, inc, vectors.v, inc, queue);
@@ -416,8 +456,8 @@ void run(index_type num_rows, index_type num_cols, value_type* mtx,
     *t_solve = 0;
     double t = magma_sync_wtime(queue);
     // while (1) {
-        // step_1(num_rows, num_cols, mtx, precond_mtx, ld_precond, scalars,
-            //    vectors, queue);
+        step_1(num_rows, num_cols, mtx, precond_mtx, ld_precond, scalars,
+               vectors, queue);
         // step_2(num_rows, num_cols, mtx, rhs, sol, precond_mtx, ld_precond,
             //    scalars, vectors, queue);
         // if (check_stopping_criteria(num_rows, num_cols, mtx, rhs, sol,

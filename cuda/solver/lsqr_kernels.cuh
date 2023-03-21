@@ -75,6 +75,8 @@ void default_initialization(magma_queue_t queue, index_type num_rows,
 template <typename value_type, typename index_type>
 void solution_initialization(index_type num_rows, value_type* init_sol, value_type* sol, magma_queue_t queue);
 
+template <typename value_type, typename index_type>
+void set_values(index_type num_elems, value_type val, value_type* values);
 
 }  // namespace cuda
 }  // namespace rls

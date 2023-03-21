@@ -219,9 +219,20 @@ void initialize_with_precond(std::string filename_mtx, std::string filename_rhs,
     // Initializes matrix and rhs.
     memory::malloc_cpu(mtx, num_rows * num_cols);
     io::read_mtx_values((char*)filename_mtx.c_str(), num_rows, num_cols, *mtx);
+    auto v = *mtx;
+
+    std::cout << "*mtx[0]: " << v[0] << '\n';
+    std::cout << "*mtx[" << num_rows << "]: " << v[num_rows] << '\n';
+    std::cout << "*mtx[" << 2* num_rows << "]: " << v[2*num_rows] << '\n';
+    std::cout << "mtx\n";
+    rls::io::print_mtx(5, 5, (double*)v, num_rows);
+
     memory::malloc(dmtx, num_rows * num_cols);
+    std::cout << "(dmtx == nullptr): " << (dmtx == nullptr) << '\n';
     memory::setmatrix(num_rows, num_cols, *mtx, num_rows, *dmtx, num_rows,
                       magma_config.queue);
+    std::cout << "\n\n";
+    // rls::io::print_mtx_gpu(5, 5, (*dmtx), num_rows, magma_config.queue);
     memory::malloc(sol, num_cols);
     memory::malloc(init_sol, num_cols);
     memory::malloc(rhs, num_rows);
@@ -251,8 +262,11 @@ void initialize_with_precond(std::string filename_mtx, std::string filename_rhs,
         auto status = curandGenerateNormal(magma_config.rand_generator,
                                            (float*)sketch_mtx,
                                            sampled_rows * num_rows, 0, 1);
+        std::cout << "status: " << status << '\n';
     }
     cudaDeviceSynchronize();
+    std::cout << "sketch_mtx:\n";
+    // rls::io::print_mtx_gpu(5, 5, sketch_mtx, sampled_rows, magma_config.queue);
 
     // Generates preconditioner.
     auto precond_state = new preconditioner::gaussian::state<value_type_in, value_type,

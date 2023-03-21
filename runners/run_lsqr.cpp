@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
     solver.initialize();
     solver.run();
     solver.print_runtime_info();
-    solver.write_output();
+    // solver.write_output();
     solver.finalize();
     return 0;
 }
