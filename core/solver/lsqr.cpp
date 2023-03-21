@@ -142,6 +142,7 @@ void initialize(index_type num_rows, index_type num_cols, value_type* mtx,
 
     *iter = 0;
     scalars.beta = blas::norm2(num_rows, rhs, vectors.inc, queue);
+    std::cout << "scalars.beta: " << scalars.beta << "\n";
     blas::copy(num_rows, rhs, vectors.inc, vectors.u, vectors.inc, queue);
     blas::scale(num_rows, 1 / scalars.beta, vectors.u, vectors.inc, queue);
 
@@ -160,6 +161,8 @@ void initialize(index_type num_rows, index_type num_cols, value_type* mtx,
     precond_apply(MagmaTrans, num_cols, precond_mtx, ld_precond, vectors.v,
                   vectors.inc, queue);
     scalars.alpha = blas::norm2(num_cols, vectors.v, vectors.inc, queue);
+    std::cout << "scalars.alpha: " << scalars.alpha << '\n';
+    rls::io::print_mtx_gpu(1, 1, precond_mtx, 1, queue);
 
     blas::scale(num_cols, 1 / scalars.alpha, vectors.v, vectors.inc, queue);
     blas::copy(num_cols, vectors.v, vectors.inc, vectors.w, vectors.inc, queue);
@@ -412,17 +415,17 @@ void run(index_type num_rows, index_type num_cols, value_type* mtx,
                scalars, vectors, queue);
     *t_solve = 0;
     double t = magma_sync_wtime(queue);
-    while (1) {
-        step_1(num_rows, num_cols, mtx, precond_mtx, ld_precond, scalars,
-               vectors, queue);
-        step_2(num_rows, num_cols, mtx, rhs, sol, precond_mtx, ld_precond,
-               scalars, vectors, queue);
-        if (check_stopping_criteria(num_rows, num_cols, mtx, rhs, sol,
-                                    vectors.temp, iter, max_iter, tol, resnorm,
-                                    queue)) {
-            break;
-        }
-    }
+    // while (1) {
+        // step_1(num_rows, num_cols, mtx, precond_mtx, ld_precond, scalars,
+            //    vectors, queue);
+        // step_2(num_rows, num_cols, mtx, rhs, sol, precond_mtx, ld_precond,
+            //    scalars, vectors, queue);
+        // if (check_stopping_criteria(num_rows, num_cols, mtx, rhs, sol,
+                                    // vectors.temp, iter, max_iter, tol, resnorm,
+                                    // queue)) {
+            // break;
+        // }
+    // }
     *t_solve += (magma_sync_wtime(queue) - t);
     finalize(vectors);
 }

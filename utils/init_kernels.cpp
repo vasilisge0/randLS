@@ -259,10 +259,10 @@ void initialize_with_precond(std::string filename_mtx, std::string filename_rhs,
         index_type>();
     precond_state->allocate(num_rows, num_cols, sampled_rows, num_rows, sampled_rows,
         sampled_rows);
-    // preconditioner::gaussian::generate(
-    //     sampled_rows, num_rows, sketch_mtx, sampled_rows, num_rows, num_cols,
-    //     *dmtx, num_rows, *precond_mtx, sampled_rows, precond_state, magma_config,
-    //     t_precond, t_mm, t_qr);
+    preconditioner::gaussian::generate(
+        sampled_rows, num_rows, sketch_mtx, sampled_rows, num_rows, num_cols,
+        *dmtx, num_rows, *precond_mtx, sampled_rows, precond_state, magma_config,
+        t_precond, t_mm, t_qr);
     memory::free(sketch_mtx);
     precond_state->free();
 

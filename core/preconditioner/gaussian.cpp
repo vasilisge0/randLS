@@ -76,25 +76,25 @@ void generate(index_type num_rows_sketch, index_type num_cols_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor,
-              state<value_type_internal, value_type, index_type>& precond_state, 
+              state<value_type_internal, value_type, index_type>* precond_state, 
               detail::magma_info& info, double* runtime, double* t_mm,
               double* t_qr)
 {
     // Performs matrix-matrix multiplication in value_type_internal precision
     // and promotes output to value_type precision.
     if (!std::is_same<value_type_internal, value_type>::value) {
-        cuda::demote(num_rows_mtx, num_cols_mtx, dmtx, num_rows_mtx, precond_state.dmtx_rp,
+        cuda::demote(num_rows_mtx, num_cols_mtx, dmtx, num_rows_mtx, precond_state->dmtx_rp,
                      num_rows_mtx);
         cuda::demote(num_rows_sketch, num_cols_sketch, dsketch, num_rows_sketch,
-                     precond_state.dsketch_rp, num_rows_sketch);
+                     precond_state->dsketch_rp, num_rows_sketch);
         cudaDeviceSynchronize();
         auto t = magma_sync_wtime(info.queue);
         blas::gemm(MagmaNoTrans, MagmaNoTrans, num_rows_sketch, num_cols_mtx,
-                   num_rows_mtx, 1.0, precond_state.dsketch_rp, num_rows_sketch, precond_state.dmtx_rp,
-                   num_rows_mtx, 0.0, precond_state.dresult_rp, num_rows_sketch, info);
+                   num_rows_mtx, 1.0, precond_state->dsketch_rp, num_rows_sketch, precond_state->dmtx_rp,
+                   num_rows_mtx, 0.0, precond_state->dresult_rp, num_rows_sketch, info);
         *runtime += (magma_sync_wtime(info.queue) - t);
         cudaDeviceSynchronize();
-        cuda::promote(num_rows_sketch, num_cols_mtx, precond_state.dresult_rp,
+        cuda::promote(num_rows_sketch, num_cols_mtx, precond_state->dresult_rp,
                       num_rows_sketch, dr_factor, num_rows_sketch);
     } else {
         auto t = magma_sync_wtime(info.queue);
@@ -159,35 +159,35 @@ template void generate<__half, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_faclor, state<__half, double, magma_int_t>& precond_state, detail::magma_info& info,
+    magma_int_t ld_r_faclor, state<__half, double, magma_int_t>* precond_state, detail::magma_info& info,
     double* runtime, double* t_mm, double* t_qr);
 
 template void generate<__half, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    state<__half, float, magma_int_t>& precond_state, detail::magma_info& info, double* runtime, double* t_mm,
+    state<__half, float, magma_int_t>* precond_state, detail::magma_info& info, double* runtime, double* t_mm,
     double* t_qr);
 
 template void generate<float, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, state<float, double, magma_int_t>& precond_state, detail::magma_info& info,
+    magma_int_t ld_r_factor, state<float, double, magma_int_t>* precond_state, detail::magma_info& info,
     double* runtime, double* t_mm, double* t_qr);
 
 template void generate<float, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    state<float, float, magma_int_t>& precond_state, detail::magma_info& info, double* runtime, double* t_mm,
+    state<float, float, magma_int_t>* precond_state, detail::magma_info& info, double* runtime, double* t_mm,
     double* t_qr);
 
 template void generate<double, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, state<double, double, magma_int_t>& precond_state, detail::magma_info& info,
+    magma_int_t ld_r_factor, state<double, double, magma_int_t>* precond_state, detail::magma_info& info,
     double* runtime, double* t_mm, double* t_qr);
 
 

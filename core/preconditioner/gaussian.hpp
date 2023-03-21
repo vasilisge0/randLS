@@ -46,7 +46,7 @@ void generate(index_type num_rows_sketch, index_type num_cols_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor,
-              state<value_type_internal, value_type, index_type>& precond_state,
+              state<value_type_internal, value_type, index_type>* precond_state,
               detail::magma_info& info, double* runtime, double* t_mm,
               double* t_qr);
 
