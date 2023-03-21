@@ -9,6 +9,7 @@
 #include "../../include/base_types.hpp"
 #include "../../utils/io.hpp"
 #include "../memory/memory.hpp"
+#include "../../cuda/solver/lsqr_kernels.cuh"
 
 
 namespace rls {
@@ -23,7 +24,7 @@ public:
     dense(dim2 size_in)
     {
         size = size_in;
-        memory::malloc(&values, size[0] * size[1]);
+        // memory::malloc(&values, size[0] * size[1]);
     }
 
     ~dense()
@@ -39,9 +40,21 @@ public:
         memory::malloc(&values, size[0] * size[1]);
     }
 
+    void generate()
+    {
+        std::cout << "size[0] * size[1]: " << size[0] * size[1] << '\n';
+        memory::malloc(&values, size[0] * size[1]);
+        std::cout << "(values == nullptr): " << (values == nullptr) << '\n';
+    }
+
     void generate_cpu(dim2 size_in)
     {
         size = size_in;
+        memory::malloc_cpu(&values, size[0] * size[1]);
+    }
+
+    void generate_cpu()
+    {
         memory::malloc_cpu(&values, size[0] * size[1]);
     }
 
@@ -52,8 +65,11 @@ public:
         value_type* tmp;
         memory::malloc_cpu(&tmp, size[0] * size[1]);
         io::read_mtx_values((char*)filename_mtx.c_str(), size[0], size[1], tmp);
+        std::cout << "tmp[0]: " << tmp[0] << '\n';
+        std::cout << "size[0]: " << size[0] << ", size[1]: " << size[1] << '\n';
         memory::setmatrix(size[0], size[1], tmp, size[0], values, size[0],
                           queue);
+        rls::io::print_mtx_gpu(1, 1, (double*)values, 1, queue);
         memory::free_cpu(tmp);
     }
 
@@ -67,11 +83,18 @@ public:
 
     void zeros()
     {
+        auto num_elems = size[0] * size[1];
+        value_type zero = 0.0;
+        cuda::set_values(num_elems, zero, values);
+    }
+
+    void zeros_cpu()
+    {
         if (values != nullptr) {
-            auto num_elems = size[0] * size[1];
-            for (auto i = 0; i < num_elems; i++) {
-                values[i] = 0.0;
-            }
+           auto num_elems = size[0] * size[1];
+           for (auto i = 0; i < num_elems; i++) {
+               values[i] = 0.0;
+           }
         }
     }
 

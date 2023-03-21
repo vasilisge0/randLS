@@ -36,7 +36,7 @@ enum PrecondType {
 class generic_preconditioner {
     protected:
         detail::magma_info info;
-        magma_queue_t queue;
+        // magma_queue_t queue;
         PrecondValueType type_selection = Undefined_PrecondValueType;
         PrecondType type;
 
@@ -72,6 +72,7 @@ public:
 
     // void generate(matrix::dense<value_type>* mtx);
     void generate(matrix::dense<value_type>* mtx) {
+        std::cout << "GENERATE PRECOND\n";
         // if (this->type == Gaussian) {
             // auto this_precond = dynamic_cast<gaussian<value_type_in, value_type, index_type>*>(this);
             // auto this_precond = dynamic_cast<gaussian<double, double, magma_int_t>*>(precond);

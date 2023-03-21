@@ -4,6 +4,9 @@
 #include <cuda_runtime.h>
 #include <string>
 
+#include "../core/memory/detail.hpp"
+
+#include <iostream>
 
 namespace rls {
 namespace io {
@@ -81,6 +84,7 @@ void write_mtx(char* filename, magma_int_t m, magma_int_t n, float* mtx) {
 }
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx) {
+    std::cout << "m: " << m << ", n: " << n << '\n';
     for (auto i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             printf("%lf ", mtx[i + j * m]);
@@ -103,7 +107,7 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx, mag
     double* t;
     magma_malloc_cpu((void**)&t, num_rows * num_cols * sizeof(double));
     magma_dgetmatrix(num_rows, num_cols, dmtx, ld,
-              t, num_rows, queue);
+             t, num_rows, queue);
     print_mtx(num_rows, num_cols, t, num_rows);
     magma_free_cpu(t);
 }

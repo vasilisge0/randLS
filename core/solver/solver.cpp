@@ -19,6 +19,7 @@ void solver::generate(std::string& filename_mtx, std::string& filename_rhs)
             {
                 std::cout << "before\n";
                 auto this_solver = dynamic_cast<lsqr<double, double, magma_int_t>*>(this);
+                std::cout << "after dynamic cast\n";
                 this_solver->generate(filename_mtx, filename_rhs);
                 break;
             }
@@ -66,12 +67,14 @@ void solver::generate(std::string& filename_mtx, std::string& filename_rhs)
 
 void solver::run()
 {
+    std::cout << "solver::run" << '\n';
     if (this->type == Lsqr) {
         switch(combined_value_type)
         {
             case FP64_FP64:
             {
                 auto this_solver = dynamic_cast<lsqr<double, double, magma_int_t>*>(this);
+                std::cout << "before (run)\n" << '\n';
                 this_solver->run();
                 break;
             }

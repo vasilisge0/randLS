@@ -14,7 +14,7 @@ namespace preconditioner {
 
 template <typename value_type_in, typename value_type,
           typename index_type>
-void generate(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
+void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx, value_type* dmtx, index_type ld_mtx,
               value_type* dr_factor, index_type ld_r_factor,
               value_type* hat_mtx, detail::magma_info& info)
@@ -65,7 +65,7 @@ void generate(index_type num_rows_sketch, index_type num_cols_sketch, value_type
 
 template <typename value_type_in, typename value_type,
           typename index_type>
-void generate(index_type num_rows_sketch, index_type num_cols_sketch,
+void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
               value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
@@ -119,67 +119,68 @@ void generate(index_type num_rows_sketch, index_type num_cols_sketch,
         printf(">>> error occured during qr run, exit with code: %d\n",
                info_qr);
     }
+    
     memory::free_cpu(tau);
 }
 
 
-template void generate<__half, double, magma_int_t>(
+template void compute_precond<__half, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
     magma_int_t ld_r_factor, double* hat_mtx, detail::magma_info& info);
 
-template void generate<__half, float, magma_int_t>(
+template void compute_precond<__half, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
     float* hat_mtx, detail::magma_info& info);
 
-template void generate<float, double, magma_int_t>(
+template void compute_precond<float, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
     magma_int_t ld_r_factor, double* hat_mtx, detail::magma_info& info);
 
-template void generate<float, float, magma_int_t>(
+template void compute_precond<float, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
     float* hat_mtx, detail::magma_info& info);
 
-template void generate<double, double, magma_int_t>(
+template void compute_precond<double, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
     magma_int_t ld_r_factor, double* hat_mtx, detail::magma_info& info);
 
-template void generate<__half, double, magma_int_t>(
+template void compute_precond<__half, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
     magma_int_t ld_r_factor, double* hat_mtx, detail::magma_info& info,
     double* runtime);
 
-template void generate<__half, float, magma_int_t>(
+template void compute_precond<__half, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
     float* hat_mtx, detail::magma_info& info, double* runtime);
 
-template void generate<float, double, magma_int_t>(
+template void compute_precond<float, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
     magma_int_t ld_r_factor, double* hat_mtx, detail::magma_info& info,
     double* runtime);
 
-template void generate<float, float, magma_int_t>(
+template void compute_precond<float, float, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
     float* hat_mtx, detail::magma_info& info, double* runtime);
 
-template void generate<double, double, magma_int_t>(
+template void compute_precond<double, double, magma_int_t>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,

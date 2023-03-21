@@ -30,10 +30,15 @@ struct temp_vectors{
     temp_vectors(dim2 size) {
         std::cout << "in constructor of temp_vectors\n";
         std::cout << "size[0]: " << size[0] << '\n';
+        std::cout << "size[1]: " << size[1] << '\n';
         memory::malloc(&u, size[0]);
+        std::cout << "(u == nullptr): " << (u == nullptr) << '\n';
         memory::malloc(&v, size[0]);
+        std::cout << "(v == nullptr): " << (v == nullptr) << '\n';
         memory::malloc(&w, size[0]);
+        std::cout << "(w == nullptr): " << (w == nullptr) << '\n';
         memory::malloc(&temp, size[0]);
+        std::cout << "(temp == nullptr): " << (temp == nullptr) << '\n';
         if (!std::is_same<value_type_in, value_type>::value) {
             memory::malloc(&u_in, size[0]);
             memory::malloc(&v_in, size[0]);
@@ -181,6 +186,7 @@ public:
 
     void generate(std::string& filename_mtx, std::string& filename_rhs)
     {
+        std::cout << "in lsqr generate\n";
         mtx = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         init_sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
@@ -204,16 +210,14 @@ public:
 
         vectors = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
            new temp_vectors<value_type_in, value_type, index_type>(mtx->get_size()));
-// // 
-//         // scalars = std::shared_ptr<temp_scalars<value_type, index_type>>(
-//             // new temp_scalars<value_type, index_type>());
-// // 
+
         if (use_precond) {
             auto this_precond = dynamic_cast<preconditioner::gaussian<value_type_in, value_type, index_type>*>(precond);
-            std::cout << "before generate\n";
-            std::cout << "this->mtx->get_size()[0]: " << this->mtx->get_size()[0] << '\n';
             this_precond->generate(mtx.get());
+            this_precond->compute(mtx.get());
         }
+
+        this->max_iter = num_rows;
     }
 
     // lsqr(dim2 size, double tolerance_in, magma_int_t iterations_in,
@@ -298,7 +302,8 @@ template <typename value_type_in, typename value_type, typename index_type>
 void lsqr<value_type_in, value_type, index_type>::run()
 {
     if (use_precond) {
-        // run_solvr();
+        // run_solver();
+        std::cout << "in lsqr::run\n";
         std::cout << "before run\n";
         // run_lsqr(mtx.get(), rhs.get(), sol.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type>*>(precond),
             // scalars.get(), vectors.get(), this->get_max_iter(), this->get_tolerance(), &iter, &resnorm, this->get_queue(), &t_solve);

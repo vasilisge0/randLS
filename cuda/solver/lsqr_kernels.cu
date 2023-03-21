@@ -116,5 +116,35 @@ template void default_initialization(magma_queue_t queue, magma_int_t num_rows,
                                      double* rhs);
 
 
+template <typename value_type, typename index_type>
+__global__ void set_values_1d_kernel(index_type num_elems, value_type val, value_type* values)
+{
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < num_elems) {
+        values[row] = val;
+    }
+}
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, double val, double* values);
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, float val, float* values);
+
+template __global__ void set_values_1d_kernel(magma_int_t num_elems, __half val, __half* values);
+
+template <typename value_type, typename index_type>
+void set_values(index_type num_elems, value_type val, value_type* values)
+{
+    set_values_1d_kernel<<<num_elems/CUDA_MAX_NUM_THREADS_PER_BLOCK + 1,
+        CUDA_MAX_NUM_THREADS_PER_BLOCK>>>(num_elems, val, values);
+    cudaDeviceSynchronize();
+}
+
+template void set_values(magma_int_t num_elems, double val, double* values);
+
+template void set_values(magma_int_t num_elems, float val, float* values);
+
+template void set_values(magma_int_t num_elems, __half val, __half* values);
+
+
 }  // namespace cuda
 }  // namespace rls

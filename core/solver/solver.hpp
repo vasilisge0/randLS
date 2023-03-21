@@ -69,7 +69,7 @@ public:
         std::cout << "~solver\n";
     }
 
-    void generate(std::string& filename_mtx, std::string& filename_rhs);
+    virtual void generate(std::string& filename_mtx, std::string& filename_rhs);
 
     virtual void run();
 

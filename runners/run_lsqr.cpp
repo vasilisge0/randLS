@@ -140,54 +140,53 @@ int main(int argc, char* argv[]) {
     auto solver_prec_type = precision_parser(input_solver_prec, input_solver_in_prec);
     magma_int_t max_iter = 0;
     std::shared_ptr<rls::solver::solver> solver;
-    // switch (solver_prec_type) {
-    //     case 0:
-    //     {
+    switch (solver_prec_type) {
+        case 0:
+        {
             data_type_solver = FP64;
             std::cout << "BEFORE\n";
             solver = std::shared_ptr<rls::solver::lsqr<double, double, magma_int_t>>(new rls::solver::lsqr<double, double, magma_int_t>(precond, tol, magma_config.queue));
-    //         break;
-    //     }
-
-    //     case 1:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<float, double, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;
-    //     }
-    //     case 2:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<__half, double, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;  
-    //     }
-    //     case 3:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;
-    //     }
-    //     case 4:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<__half, float, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;
-    //     }
-    //     case 5:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;
-    //     }
-    //     case 6:
-    //     {
-    //         data_type_solver = FP64;
-    //         solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
-    //         break;
-    //     }
-    //     default:
-    //         break;
-    // }
+            break;
+        }
+        case 1:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<float, double, magma_int_t>(precond, tol, magma_config.queue);
+            break;
+        }
+        case 2:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<__half, double, magma_int_t>(precond, tol, magma_config.queue);
+            break;  
+        }
+        case 3:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            break;
+        }
+        case 4:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<__half, float, magma_int_t>(precond, tol, magma_config.queue);
+            break;
+        }
+        case 5:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            break;
+        }
+        case 6:
+        {
+            data_type_solver = FP64;
+            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            break;
+        }
+        default:
+            break;
+    }
 
     // //// Exit if the "outer" precision in both the preconditioner and the solver are different.
     // //if (data_type_solver != data_type_precond) {
@@ -196,6 +195,8 @@ int main(int argc, char* argv[]) {
 
     auto this_precond = dynamic_cast<rls::preconditioner::gaussian<double, double, magma_int_t>*>(precond);
     solver->generate(input_mtx, input_rhs);
-    // solver->run();
+    std::cout << "\n\n\n\n";
+    std::cout << "run: \n";
+    solver->run();
     return 0;
 }
