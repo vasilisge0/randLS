@@ -9,17 +9,12 @@ namespace solver {
 
 void solver::generate(std::string& filename_mtx, std::string& filename_rhs)
 {
-    std::cout << "this->type: " << this->type << '\n';
-    std::cout << "Lsqr: " << Lsqr << '\n';
-    if (this->type == Lsqr) {
-    std::cout << "combined_value_type: " << combined_value_type << ", FP64_FP64: " << FP64_FP64 << '\n';
-        switch(combined_value_type)
+    if (type_ == Lsqr) {
+        switch(combined_value_type_)
         {
             case FP64_FP64:
             {
-                std::cout << "before\n";
                 auto this_solver = dynamic_cast<lsqr<double, double, magma_int_t>*>(this);
-                std::cout << "after dynamic cast\n";
                 this_solver->generate(filename_mtx, filename_rhs);
                 break;
             }
@@ -67,14 +62,12 @@ void solver::generate(std::string& filename_mtx, std::string& filename_rhs)
 
 void solver::run()
 {
-    std::cout << "solver::run" << '\n';
-    if (this->type == Lsqr) {
-        switch(combined_value_type)
+    if (type_ == Lsqr) {
+        switch(combined_value_type_)
         {
             case FP64_FP64:
             {
                 auto this_solver = dynamic_cast<lsqr<double, double, magma_int_t>*>(this);
-                std::cout << "before (run)\n" << '\n';
                 this_solver->run();
                 break;
             }

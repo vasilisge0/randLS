@@ -5,8 +5,8 @@ namespace rls {
 namespace preconditioner {
 
 void generic_preconditioner::generate() {
-    if (this->type == Gaussian) {
-        switch(type_selection)
+    if (this->type_ == Gaussian) {
+        switch(type_selection_)
         {
             case FP64_FP64:
             {

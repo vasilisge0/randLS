@@ -56,8 +56,6 @@ void write_mtx(char* filename, magma_int_t m, magma_int_t n, double* mtx) {
     FILE* file_handle = fopen(filename, "w");
     mm_write_banner(file_handle, matcode);
     mm_write_mtx_array_size(file_handle, m, n);
-    printf("m: %d\n", m);
-    printf("n: %d\n", n);
     for (int j = 0; j < n; ++j) {
         for (int i = 0; i < m; ++i) {
             fprintf(file_handle, "%lf\n", mtx[i + j * m]);
@@ -74,8 +72,6 @@ void write_mtx(char* filename, magma_int_t m, magma_int_t n, float* mtx) {
     FILE* file_handle = fopen(filename, "w");
     mm_write_banner(file_handle, matcode);
     mm_write_mtx_array_size(file_handle, m, n);
-    printf("m: %d\n", m);
-    printf("n: %d\n", n);
     for (int j = 0; j < n; ++j) {
         for (int i = 0; i < m; ++i) {
             fprintf(file_handle, "%lf\n", mtx[i + j * m]);
@@ -136,7 +132,6 @@ void write_mtx(char* filename, magma_int_t num_rows, magma_int_t num_cols, float
 void write_output(char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t max_iter,
     double sampling_coeff, magma_int_t sampled_rows, double t_precond, double t_solve, double t_total,
     magma_int_t iter, double relres) {
-    printf("filename: %s\n", filename);
     FILE* file_handle = fopen(filename, "w");
     fprintf(file_handle, "%d\n", num_rows);
     fprintf(file_handle, "%d\n", num_cols);

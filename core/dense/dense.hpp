@@ -42,9 +42,7 @@ public:
     void generate()
     {
         device = GPU;
-        std::cout << "size[0] * size[1]: " << size[0] * size[1] << '\n';
         memory::malloc(&values, size[0] * size[1]);
-        std::cout << "(values == nullptr): " << (values == nullptr) << '\n';
     }
 
     void generate_cpu(dim2 size_in)
@@ -68,11 +66,8 @@ public:
         value_type* tmp;
         memory::malloc_cpu(&tmp, size[0] * size[1]);
         io::read_mtx_values((char*)filename_mtx.c_str(), size[0], size[1], tmp);
-        std::cout << "tmp[0]: " << tmp[0] << '\n';
-        std::cout << "size[0]: " << size[0] << ", size[1]: " << size[1] << '\n';
         memory::setmatrix(size[0], size[1], tmp, size[0], values, size[0],
                           queue);
-        rls::io::print_mtx_gpu(1, 1, (double*)values, 1, queue);
         memory::free_cpu(tmp);
     }
 

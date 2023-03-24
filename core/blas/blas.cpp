@@ -104,7 +104,6 @@ void trsv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
           magma_int_t n, magmaDouble_const_ptr dA, magma_int_t ldda,
           magmaDouble_ptr dx, magma_int_t incx, magma_queue_t queue)
 {
-    std::cout << "in dtrsv\n";
     magma_dtrsv(uplo, trans, diag, n, dA, ldda, dx, incx, queue);
 }
 

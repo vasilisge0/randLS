@@ -235,10 +235,6 @@ void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
     auto t = magma_sync_wtime(queue);
     blas::geqrf2_gpu(num_rows_sketch, num_cols_mtx, dr_factor, ld_r_factor, tau,
                      &info_qr);
-
-    std::cout << "dr_factor: \n";
-    // rls::io::print_mtx_gpu(5, 5, (double*)dr_factor, num_cols_mtx, info.queue);
-    rls::io::print_mtx_gpu(5, 5, (double*)dr_factor, ld_r_factor, queue);
     auto dt_qr = (magma_sync_wtime(queue) - t);
     *t_mm += *runtime;
     *t_qr += dt_qr;

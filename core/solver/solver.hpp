@@ -27,12 +27,12 @@ enum SolverType {
 
 class AbstractSolver {
 protected:
-    std::shared_ptr<Context> context;
-    double tolerance = 1e-8;
-    magma_int_t max_iter = 0;
-    bool use_precond = false;
-    SolverValueType combined_value_type;
-    SolverType type;
+    std::shared_ptr<Context> context_;
+    double tolerance_ = 1e-8;
+    magma_int_t max_iter_ = 0;
+    bool use_precond_ = false;
+    SolverValueType combined_value_type_;
+    SolverType type_;
 
 public:
     AbstractSolver() {}
@@ -47,13 +47,9 @@ public:
 
     virtual void run() = 0;
 
-    double get_tolerance() {
-        return tolerance;
-    }
+    double get_tolerance() { return tolerance_; }
 
-    magma_int_t get_max_iter() {
-        return max_iter;
-    }
+    magma_int_t get_max_iter() { return max_iter_; }
 
     // magma_queue_t get_queue() {
         // return queue;
@@ -64,9 +60,7 @@ class solver : public AbstractSolver {
 public:
     // void run() {}
 
-    ~solver() {
-        std::cout << "~solver\n";
-    }
+    ~solver() { }
 
     virtual void generate(std::string& filename_mtx, std::string& filename_rhs);
 

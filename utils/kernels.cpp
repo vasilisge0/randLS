@@ -107,8 +107,6 @@ void initialize(index_type matrix_selection, index_type* num_rows_io,
     index_type num_rows = 0;
     index_type num_cols = 0;
     rls::io::read_mtx_size((char*)filename_mtx.c_str(), &num_rows, &num_cols);
-    std::cout << "matrix: " << filename_mtx.c_str() << "\n";
-    std::cout << "rows: " << num_rows << ", cols: " << num_cols << "\n";
 
     memory::malloc_cpu(mtx, num_rows * num_cols);
     io::read_mtx_values((char*)filename_mtx.c_str(), num_rows, num_cols, *mtx);
