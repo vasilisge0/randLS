@@ -1,5 +1,5 @@
-#ifndef BLENDNPIK_MEMORY_HPP
-#define BLENDNPIK_MEMORY_HPP
+#ifndef RLS_MEMORY_HPP
+#define RLS_MEMORY_HPP
 
 
 #include "magma_v2.h"
@@ -29,9 +29,9 @@ void free(magmaHalf_ptr ptr);
 
 void free(magma_int_t* ptr);
 
-void free_cpu(magmaDouble_ptr ptr);
+void free_cpu(double* ptr);
 
-void free_cpu(magmaFloat_ptr ptr);
+void free_cpu(float* ptr);
 
 void setmatrix(magma_int_t m, magma_int_t n, double* A, magma_int_t ldA,
                double* B, magma_int_t ldB, magma_queue_t& queue);

@@ -38,19 +38,16 @@ enum PrecondType {
 
 class generic_preconditioner {
     protected:
-        std::shared_ptr<MagmaContext> context;
+        std::shared_ptr<Context> context;
         PrecondValueType type_selection = Undefined_PrecondValueType;
         PrecondType type;
 
     public:
-        generic_preconditioner() {}
+        generic_preconditioner() { }
 
         PrecondValueType get_precond_valuetype() { return type_selection; }
 
-    virtual void generate();
-
-    void test();
-
+        virtual void generate();
 };
 
 
@@ -73,7 +70,9 @@ public:
         return mtx;
     }
 
-    void generate(matrix::dense<value_type>* mtx) { }
+    void generate(matrix::dense<value_type>* mtx) { std::cout << "here\n"; }
+
+    virtual void compute(matrix::dense<value_type>* mtx) { }
 
     void set_type() {
         if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))

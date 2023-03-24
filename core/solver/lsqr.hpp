@@ -135,7 +135,6 @@ public:
         double tolerance_in, int max_iter_in, magma_queue_t queue_in) {
         
         this->type = Lsqr;
-        precond_in->test();
         switch (precond_in->get_precond_valuetype()) {
             // case preconditioner::FP64_FP64:
             // {
@@ -170,9 +169,7 @@ public:
     lsqr(preconditioner::generic_preconditioner* precond_in,
         double tolerance_in,
         magma_queue_t& queue_in) {
-        std::cout << "lsqr constructor\n";
         this->precond = precond_in;
-        std::cout << "TEST [[[ set queue ]]]" << '\n';
         this->queue = queue_in;
         this->tolerance = tolerance_in;
         this->type = Lsqr;
@@ -180,20 +177,58 @@ public:
         this->set_type();
     }
 
-    void test() {
-
+    lsqr(preconditioner::generic_preconditioner* precond_in,
+        double tolerance_in,
+        std::shared_ptr<Context> context) {
+        std::cout << "LSQR constructor\n";
+        this->precond = precond_in;
+        this->tolerance = tolerance_in;
+        this->type = Lsqr;
+        this->context = context;
+        use_precond = true;
+        this->set_type();
     }
+
+    lsqr(preconditioner::generic_preconditioner* precond_in,
+        double tolerance_in, int max_iter_in,
+        std::shared_ptr<Context> context) {
+        this->tolerance = tolerance_in;
+        this->max_iter = max_iter_in;
+        this->type = Lsqr;
+        // this->queue = queue_in;
+        this->context = context;
+        use_precond = true;
+        this->set_type();
+    }
+
+    static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
+        create(preconditioner::generic_preconditioner* precond_in,
+        double tolerance_in,
+        std::shared_ptr<Context> context)
+    {
+        return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, tolerance_in, context));
+    } 
+
+    static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
+        create(preconditioner::generic_preconditioner* precond_in,
+        double tolerance_in, int max_iter_in,
+        std::shared_ptr<Context> context)
+    {
+        return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, tolerance_in, max_iter_in, context));
+    } 
+
 
     void generate(std::string& filename_mtx, std::string& filename_rhs)
     {
-        std::cout << "in lsqr generate\n";
+        auto context = this->context;
+        auto queue = context->get_queue();
         mtx = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         init_sol = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         rhs = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
 
         // Initializes matrix and rhs.
-        mtx->generate(filename_mtx, this->queue);
+        mtx->generate(filename_mtx, queue);
         auto num_rows = mtx->get_size()[0];
         auto num_cols = mtx->get_size()[1];
 
@@ -202,7 +237,7 @@ public:
         sol->zeros();          
         init_sol->generate({num_cols, 1});
         init_sol->zeros();          
-        rhs->generate(filename_rhs, this->queue);
+        rhs->generate(filename_rhs, queue);
 
         vectors = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
            new temp_vectors<value_type_in, value_type, index_type>(mtx->get_size()));
@@ -276,7 +311,6 @@ public:
 
 private:
     void allocate_vectors(dim2 size);
-
     void free_vectors();
 
     bool use_precond = false;
@@ -284,7 +318,6 @@ private:
     double resnorm;
     double t_solve;
     std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>> vectors;
-    //std::shared_ptr<temp_scalars<value_type, index_type>> scalars;
     temp_scalars<value_type, index_type> scalars;
     preconditioner::generic_preconditioner* precond;
     std::shared_ptr<matrix::dense<value_type>> mtx;
@@ -297,14 +330,14 @@ private:
 template <typename value_type_in, typename value_type, typename index_type>
 void lsqr<value_type_in, value_type, index_type>::run()
 {
+    auto context = this->context;
     if (use_precond) {
-        // run_solver();
         std::cout << "in lsqr::run\n";
         std::cout << "before run\n";
         // run_lsqr(mtx.get(), rhs.get(), sol.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type>*>(precond),
             // scalars.get(), vectors.get(), this->get_max_iter(), this->get_tolerance(), &iter, &resnorm, this->get_queue(), &t_solve);
         run_lsqr(mtx.get(), rhs.get(), sol.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type>*>(precond),
-            &scalars, vectors.get(), this->get_max_iter(), this->get_tolerance(), &iter, &resnorm, this->get_queue(), &t_solve);
+            &scalars, vectors.get(), this->get_max_iter(), this->get_tolerance(), &iter, &resnorm, context->get_queue(), &t_solve);
     }
     else {
         // run_solver();

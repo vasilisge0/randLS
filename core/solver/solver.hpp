@@ -5,7 +5,6 @@
 #include "magma_v2.h"
 #include <iostream>
 
-
 namespace rls {
 namespace solver {
 
@@ -28,9 +27,9 @@ enum SolverType {
 
 class AbstractSolver {
 protected:
+    std::shared_ptr<Context> context;
     double tolerance = 1e-8;
     magma_int_t max_iter = 0;
-    magma_queue_t queue;
     bool use_precond = false;
     SolverValueType combined_value_type;
     SolverType type;
@@ -38,13 +37,13 @@ protected:
 public:
     AbstractSolver() {}
 
-    AbstractSolver(magma_queue_t queue_in) {
-        queue = queue_in;
-    }
+    // AbstractSolver(magma_queue_t queue_in) {
+        // queue = queue_in;
+    // }
 
     // ~AbstractSolver();
 
-    AbstractSolver(double tolerace, magma_int_t iterations, magma_queue_t queue);
+    // AbstractSolver(double tolerace, magma_int_t iterations, magma_queue_t queue);
 
     virtual void run() = 0;
 
@@ -56,9 +55,9 @@ public:
         return max_iter;
     }
 
-    magma_queue_t get_queue() {
-        return queue;
-    }
+    // magma_queue_t get_queue() {
+        // return queue;
+    // }
 };
 
 class solver : public AbstractSolver {

@@ -1,10 +1,8 @@
-#ifndef BLENDNPIK_BLAS_HPP
-#define BLENDNPIK_BLAS_HPP
+#ifndef RANDLS_BLAS_HPP
+#define RANDLS_BLAS_HPP
 
 
 #include "magma_v2.h"
-
-
 #include "../memory/magma_context.hpp"
 
 
@@ -72,19 +70,19 @@ void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, double alpha, magmaDouble_const_ptr dA,
           magma_int_t ldda, magmaDouble_const_ptr dB, magma_int_t lddb,
           double beta, magmaDouble_ptr dC, magma_int_t lddc,
-          std::shared_ptr<MagmaContext> context);
+          Context* context);
 
 void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, float alpha, magmaFloat_const_ptr dA,
           magma_int_t ldda, magmaFloat_const_ptr dB, magma_int_t lddb,
           float beta, magmaFloat_ptr dC, magma_int_t lddc,
-          std::shared_ptr<MagmaContext> context);
+          Context* context);
 
 void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, magmaHalf alpha, magmaHalf_const_ptr dA,
           magma_int_t ldda, magmaHalf_const_ptr dB, magma_int_t lddb,
           magmaHalf beta, magmaHalf_ptr dC, magma_int_t lddc,
-          std::shared_ptr<MagmaContext> context);
+          Context* context);
 
 magma_int_t geqrf2_gpu(magma_int_t m, magma_int_t n, magmaDouble_ptr dA,
                        magma_int_t ldda, double* tau, magma_int_t* info);

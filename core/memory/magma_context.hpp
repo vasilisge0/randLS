@@ -19,9 +19,9 @@ namespace rls {
 #define CUDA_MAX_NUM_THREADS_PER_BLOCK_2D 32
 
 
-class MagmaContext {
+class Context {
 public:    
-    MagmaContext() {
+    Context() {
         magma_init();
         cudaStreamCreate(&cuda_stream);
         cublasCreate(&cublas_handle);
@@ -36,7 +36,7 @@ public:
         curandSetPseudoRandomGeneratorSeed(rand_generator, time(NULL));
     }
 
-    ~MagmaContext() {
+    ~Context() {
         cudaStreamDestroy(cuda_stream);
         cublasDestroy(cublas_handle);
         cusparseDestroy(cusparse_handle);
@@ -45,9 +45,16 @@ public:
         magma_finalize();
     }
     
+    magma_queue_t get_queue() {
+        return queue;
+    }
 
-    static std::unique_ptr<MagmaContext> create() {
-        return std::make_unique<MagmaContext>();
+    curandGenerator_t get_generator() {
+        return rand_generator;
+    }
+
+    static std::unique_ptr<Context> create() {
+        return std::unique_ptr<Context>(new Context());
     }
 
     void use_tf32_math_operations()

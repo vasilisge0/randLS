@@ -42,9 +42,9 @@ void free(magmaHalf_ptr ptr) { magma_free(ptr); }
 
 void free(magma_int_t* ptr) { magma_free(ptr); }
 
-void free_cpu(magmaDouble_ptr ptr) { magma_free_cpu(ptr); }
+void free_cpu(double* ptr) { magma_free_cpu(ptr); }
 
-void free_cpu(magmaFloat_ptr ptr) { magma_free_cpu(ptr); }
+void free_cpu(float* ptr) { magma_free_cpu(ptr); }
 
 void setmatrix(magma_int_t m, magma_int_t n, double* A, magma_int_t ldA,
                double* B, magma_int_t ldB, magma_queue_t& queue)

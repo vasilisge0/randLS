@@ -49,7 +49,7 @@ void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor,
               state<value_type_internal, value_type, index_type>* precond_state, 
-              std::shared_ptr<MagmaConfig> context, double* runtime, double* t_mm,
+              std::shared_ptr<Context> context, double* runtime, double* t_mm,
               double* t_qr);
 
 
@@ -58,7 +58,7 @@ template <typename value_type_internal, typename value_type,
 void generate_old(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx, value_type* dmtx, index_type ld_mtx,
               value_type* dr_factor, index_type ld_r_factor,
-              value_type* hat_mtx, std::shared_ptr<MagmaConfig> context);
+              value_type* hat_mtx, std::shared_ptr<Context> context);
 
 // template <typename value_type_in, typename value_type,
         //   typename index_type>
@@ -74,7 +74,7 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor, value_type* hat_mtx,
-              detail::magma_info& info, double* runtime);
+              Context& info, double* runtime);
 
 template<typename value_type_in, typename value_type, typename index_type>
 class gaussian : public preconditioner<value_type_in, value_type, index_type> {
@@ -90,7 +90,7 @@ public:
         this->sampling_coeff = 1.5;
     }
 
-    gaussian(std::shared_ptr<MagmaContext> context) { 
+    gaussian(std::shared_ptr<Context> context) { 
         this->set_type();
         this->precond_type = Gaussian;
         this->sampling_coeff = 1.5;
@@ -135,30 +135,43 @@ public:
     void generate(double* runtime);
 
     void generate(matrix::dense<value_type>* mtx) {
-        // this->set_type();
+        std::cout << "here gaussian\n";
+        auto context = this->context;
+        std::cout << "after\n";
         auto num_rows = mtx->get_size()[0];
+        std::cout << "num_rows\n";
         auto num_cols = mtx->get_size()[1];
+        std::cout << "num_cols\n";
+        std::cout << "before sampling_coeff\n";
+        std::cout << "this->sampling_coeff: " << this->sampling_coeff << "\n";
+
+        std::cout << "sapmling_coeff: " << this->sampling_coeff << "\n";
+        std::cout << "num_cols: " << num_cols << "\n";
+        
         index_type sampled_rows = (index_type)(sampling_coeff * num_cols);
+        std::cout << "before size\n";
+        auto size = mtx->get_size();
+
+        std::cout << "sampled_rows: " << sampled_rows << '\n';
+        std::cout << "num_cols: " << sampled_rows << ", sampling_coeff: " << sampling_coeff << '\n';
+
+
         // Generates sketch matrix.
         sketch_mtx = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>({sampled_rows, num_rows}));
         sketch_mtx->generate();
         if (std::is_same<value_type, double>::value) {
-            auto status = 
             curandGenerateNormalDouble(
-                this->context.rand_generator, (double*)sketch_mtx->get_values(), sampled_rows * num_rows, 0, 1);
-            std::cout << "status: " << status << '\n';
+                context->get_generator(), (double*)sketch_mtx->get_values(), sampled_rows * num_rows, 0, 1);
         }
         else if (std::is_same<value_type, float>::value) {
-            // auto status = 
             curandGenerateNormal(
-                this->context.rand_generator, (float*)sketch_mtx->get_values(), sampled_rows * num_rows, 0, 1);
+                context->get_generator(), (float*)sketch_mtx->get_values(), sampled_rows * num_rows, 0, 1);
         }
         cudaDeviceSynchronize();
-        auto size = mtx->get_size();
+
+
+        // Construct preconditioner
         precond_mtx = std::shared_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>({sampled_rows, size[1]}));
-        std::cout << "sampled_rows: " << sampled_rows << '\n';
-        std::cout << "num_cols: " << sampled_rows << ", sampling_coeff: " << sampling_coeff << '\n';
-        std::cout << "precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << ", precond_mtx->get_size()[1]: " << precond_mtx->get_size()[1] << '\n';
         precond_mtx_internal = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>({sampled_rows, size[1]}));
         dt = std::unique_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>(size));
         mtx_rp = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(size));
@@ -166,13 +179,8 @@ public:
         dresult_rp = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>({sampled_rows, size[1]}));
         tau = std::unique_ptr<matrix::dense<index_type>>(new matrix::dense<index_type>({size[0], 1}));
 
-        // std::cout << "sampled_rows: " << sampled_rows << ", size[1]: " << size[1] << '\n';
-        std::cout << "allocating precond mtx\n";
-        std::cout << "sketch\n";
-        rls::io::print_mtx_gpu(5, 5, (double*)sketch_mtx->get_values(), sampled_rows, this->context.queue);
+        // Generate matrices.
         precond_mtx->generate();
-        std::cout << "precond_mtx[0]: " << '\n';
-        rls::io::print_mtx_gpu(5, 5, (double*)precond_mtx->get_values(), precond_mtx->get_size()[0], this->context.queue);
         precond_mtx_internal->generate();
         dt->generate();
         mtx_rp->generate();
@@ -189,6 +197,10 @@ public:
         return precond_mtx.get();
     }
 
+    static std::unique_ptr<gaussian<value_type_in, value_type, index_type>> create(std::shared_ptr<Context> context) {
+        return std::unique_ptr<gaussian<value_type_in, value_type, index_type>>(new gaussian<value_type_in, value_type, index_type>(context));
+    }
+
     void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u)
     {
         auto queue = this->context->get_queue();
@@ -201,7 +213,6 @@ public:
 
     void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue)
     {
-        auto queue = this->context->get_queue();
         auto size = precond_mtx->get_size();
         blas::trsv(MagmaUpper, trans, MagmaNonUnit, size[1], precond_mtx->get_values(),
             size[0], u_vector, inc_u, this->context->get_queue());
@@ -226,7 +237,7 @@ public:
             dmtx->get_values(), dmtx->get_size()[0], precond_mtx->get_values(),
             precond_mtx->get_size()[0],
             precond_state, 
-            this->info, &runtime_local, &t_mm, &t_qr);
+            this->context, &runtime_local, &t_mm, &t_qr);
         precond_state->free();
     }
 

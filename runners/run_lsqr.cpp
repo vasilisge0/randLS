@@ -39,8 +39,6 @@ enum GlobalDataType{
 
 
 int main(int argc, char* argv[]) {
-    // std::shared_ptr<SolverMemory> solver_memory;
-    // std::shared_ptr<PrecondDispatcher> precond_memory;
     std::vector<std::string> args;
     args.assign(argv, argv + argc);
     std::string input_runfile  = args[0];
@@ -72,8 +70,8 @@ int main(int argc, char* argv[]) {
     std::cout << "   input_warmup_iters: " << input_warmup_iters << '\n';
     std::cout << "  input_runtime_iters: " << input_runtime_iters << '\n';
 
-    auto context = std::share(rls::MagmaContext:;create());
 
+    // Decode input arguments.
     double tol = std::atof(input_tol.c_str());
     double sampling_coeff = std::atof(input_num_samples.c_str());
     magma_int_t warmup_iters = std::atoi(input_warmup_iters.c_str());
@@ -83,120 +81,115 @@ int main(int argc, char* argv[]) {
     enum GlobalDataType data_type_precond;
     enum GlobalDataType data_type_solver;
 
+    std::shared_ptr<rls::Context> context = rls::Context::create();
+
     // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
-    rls::preconditioner::generic_preconditioner* precond;
+    std::shared_ptr<rls::preconditioner::generic_preconditioner> precond;
     switch (precond_prec_type) {
         case 0:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<double, double, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<double, double, magma_int_t>::create(context);
             break;
         }
 
         case 1:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<float, double, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<float, double, magma_int_t>::create(context);
             break;
         }
         case 2:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<__half, double, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<__half, double, magma_int_t>::create(context);
             break;  
         }
         case 3:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<float, float, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
             break;
         }
         case 4:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<__half, float, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<__half, float, magma_int_t>::create(context);
             break;
         }
         case 5:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<float, float, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
             break;
         }
         case 6:
         {
             data_type_precond = FP64;
-            precond = new rls::preconditioner::gaussian<float, float, magma_int_t>(magma_config);
+            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
             break;
         }
         default:
             break;
     }
-    std::cout << "precond->get_precond_valuetype(): " << precond->get_precond_valuetype() << '\n';
 
     // Decides the precision of the solver preconditioner depending on the inputs.
     auto solver_prec_type = precision_parser(input_solver_prec, input_solver_in_prec);
-    magma_int_t max_iter = 0;
     std::shared_ptr<rls::solver::solver> solver;
     switch (solver_prec_type) {
         case 0:
         {
             data_type_solver = FP64;
-            std::cout << "BEFORE\n";
-            solver = std::shared_ptr<rls::solver::lsqr<double, double, magma_int_t>>(new rls::solver::lsqr<double, double, magma_int_t>(precond, tol, magma_config.queue));
+            solver = rls::solver::lsqr<double, double, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         case 1:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<float, double, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         case 2:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<__half, double, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), tol, context);
             break;  
         }
         case 3:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         case 4:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<__half, float, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         case 5:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<__half, float, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         case 6:
         {
             data_type_solver = FP64;
-            // solver = new rls::solver::lsqr<float, float, magma_int_t>(precond, tol, magma_config.queue);
+            solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), tol, context);
             break;
         }
         default:
             break;
     }
 
-    // //// Exit if the "outer" precision in both the preconditioner and the solver are different.
-    // //if (data_type_solver != data_type_precond) {
-    // //    return 0;
-    // //}
+    // Exit if the "outer" precision in both the preconditioner and the solver are different.
+    if (data_type_solver != data_type_precond) {
+       return 0;
+    }
 
-    auto this_precond = dynamic_cast<rls::preconditioner::gaussian<double, double, magma_int_t>*>(precond);
     solver->generate(input_mtx, input_rhs);
-    std::cout << "\n\n\n\n";
-    std::cout << "run: \n";
     solver->run();
-    rls::detail::destroy_magma(magma_config);
     return 0;
 }
