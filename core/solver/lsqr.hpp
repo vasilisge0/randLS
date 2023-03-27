@@ -1,5 +1,5 @@
-#ifndef LSQR_HPP
-#define LSQR_HPP
+#ifndef RLS_LSQR_HPP
+#define RLS_LSQR_HPP
 
 
 #include "../include/base_types.hpp"
@@ -79,11 +79,6 @@ void run(index_type num_rows, index_type num_cols, value_type* mtx,
           double* resnorm, value_type* precond_mtx, index_type ld_precond,
           magma_queue_t queue, double* t_solve);
 
-// template <typename value_type_in, typename value_type, typename index_type>
-// void run_lsqr<value_type_in, value_type, index_type>(matrix::dense<value_type>* mtx,
-//     matrix::dense<value_type>* rhs, preconditioner::preconditioner* precond,
-    // magma_int_t* iter, double t_solve);       
-
 template <typename value_type_in, typename value_type, typename index_type>
 void initialize(dim2 size, value_type* mtx, value_type* rhs,
                 value_type* precond_mtx, index_type ld_precond,
@@ -105,7 +100,7 @@ void run_lsqr(
 
 template<typename value_type_in, typename value_type,
          typename index_type>
-class lsqr : public solver {
+class lsqr : public generic_solver {
 public:
     lsqr() {
         this->type_ = Lsqr;
@@ -238,10 +233,8 @@ private:
 };
 
 
-
 }   // end of solver namespace
 }   // end of lsqr namespace
 
 
-
-#endif  // run_HPP
+#endif  // RLS_LSQR_HPP

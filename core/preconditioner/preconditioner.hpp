@@ -55,9 +55,9 @@ public:
 
     virtual preconditioner* get() { return this; }
 
-    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u) {}
+    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u) = 0;
 
-    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue) {}
+    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue) = 0;
 
     virtual value_type* get_values() { return mtx_->get_values(); }
 
@@ -65,9 +65,11 @@ public:
 
     std::shared_ptr<matrix::dense<value_type>> get_mtx() { return mtx_; }
 
-    void generate(matrix::dense<value_type>* mtx_in) {}
+    virtual void generate(matrix::dense<value_type>* mtx_in) = 0;
 
-    virtual void compute(matrix::dense<value_type>* mtx) { }
+    virtual void compute(matrix::dense<value_type>* mtx) = 0;
+
+    // virtual void compute() = 0;
 
     void set_type() {
         if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
@@ -98,8 +100,8 @@ protected:
 };
 
 
-}
-}
+}   // namespace preconditioner
+}   // namepsace rls
 
 
 #endif

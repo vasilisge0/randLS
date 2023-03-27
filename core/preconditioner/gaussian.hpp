@@ -1,21 +1,23 @@
-#ifndef GAUSSIAN_HPP
-#define GAUSSIAN_HPP
-#include "../../utils/io.hpp"
+#ifndef RLS_GAUSSIAN_HPP
+#define RLS_GAUSSIAN_HPP
 
-
-#include "../memory/magma_context.hpp"
-#include "../dense/dense.hpp"
-#include "preconditioner.hpp"
-#include <memory>
-#include "magma_v2.h"
-#include "../../cuda/preconditioner/preconditioner_kernels.cuh"
-#include "../blas/blas.hpp"
 
 #include <iostream>
+#include <memory>
+#include "magma_v2.h"
+
+
+#include "preconditioner.hpp"
+#include "../../utils/io.hpp"
+#include "../memory/magma_context.hpp"
+#include "../dense/dense.hpp"
+#include "../../cuda/preconditioner/preconditioner_kernels.cuh"
+#include "../blas/blas.hpp"
 
 
 namespace rls {
 namespace preconditioner {
+
 
 template <typename value_type_internal, typename value_type,
           typename index_type>
@@ -220,6 +222,7 @@ public:
 
 private:
     value_type sampling_coeff_;
+    std::shared_ptr<matrix::dense<value_type>> mtx_;
     std::shared_ptr<matrix::dense<value_type>> sketch_mtx_;
     std::shared_ptr<matrix::dense<value_type>> precond_mtx_;
     std::unique_ptr<matrix::dense<value_type_in>> precond_mtx_internal_;
@@ -229,7 +232,6 @@ private:
     std::unique_ptr<matrix::dense<value_type_in>> dresult_rp_;
     std::unique_ptr<matrix::dense<index_type>> tau_;
 };
-
 
 
 }  // namespace preconditioner

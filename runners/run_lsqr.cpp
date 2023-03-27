@@ -39,6 +39,7 @@ enum GlobalDataType{
 
 
 int main(int argc, char* argv[]) {
+
     std::vector<std::string> args;
     args.assign(argv, argv + argc);
     std::string input_runfile  = args[0];
@@ -76,7 +77,6 @@ int main(int argc, char* argv[]) {
     double sampling_coeff = std::atof(input_num_samples.c_str());
     magma_int_t warmup_iters = std::atoi(input_warmup_iters.c_str());
     magma_int_t runtime_iters = std::atoi(input_runtime_iters.c_str());
-
     enum GlobalDataType data_type;
     enum GlobalDataType data_type_precond;
     enum GlobalDataType data_type_solver;
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
 
     // Decides the precision of the solver preconditioner depending on the inputs.
     auto solver_prec_type = precision_parser(input_solver_prec, input_solver_in_prec);
-    std::shared_ptr<rls::solver::solver> solver;
+    std::shared_ptr<rls::solver::generic_solver> solver;
     switch (solver_prec_type) {
         case 0:
         {
