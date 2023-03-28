@@ -4,7 +4,7 @@
 namespace rls {
 namespace preconditioner {
 
-void generic_preconditioner::generate() {
+// void generic_preconditioner::generate() {
     // if (this->type_ == Gaussian) {
         // switch(type_selection_)
         // {
@@ -48,7 +48,7 @@ void generic_preconditioner::generate() {
         // }
     // }
 
-}
+// }
 
 }
 }

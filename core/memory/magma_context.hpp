@@ -2,6 +2,7 @@
 #define DETAIL_HPP
 
 
+#include <iostream>
 #include <memory>
 #include <time.h>
 #include <cuda_runtime.h>

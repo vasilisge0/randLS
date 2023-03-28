@@ -23,7 +23,8 @@ enum SolverValueType {
 
 enum SolverType {
     Undefined_SolverType, 
-    Lsqr
+    LSQR,
+    FGMRES
 };
 
 class AbstractSolver {
@@ -56,6 +57,8 @@ public:
 
 class generic_solver {
 public:
+    virtual void generate() = 0;
+
     virtual void generate(std::string& filename_mtx, std::string& filename_rhs) = 0;
 
     virtual void run() = 0;

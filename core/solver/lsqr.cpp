@@ -352,7 +352,7 @@ void run_lsqr(matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
         }
     }
     *t_solve += (magma_sync_wtime(queue) - t);
-    std::cout << "*iter: " << *iter << ", tolerance: " << tolerance << ", solver-runtime (sec): " << *t_solve << '\n';
+    std::cout << "*iter: " << *iter << ", max_iter: " << max_iter << ", *resnorm: " << *resnorm << ", solver-runtime (sec): " << *t_solve << '\n';
 }
 
 template void run_lsqr<double, double, int>(

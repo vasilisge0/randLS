@@ -83,6 +83,12 @@ int main(int argc, char* argv[]) {
 
     std::shared_ptr<rls::Context> context = rls::Context::create();
 
+    std::shared_ptr<rls::matrix::dense<double>> mtx = rls::matrix::dense<double>::create(context, input_mtx);
+    std::shared_ptr<rls::matrix::dense<double>> rhs = rls::matrix::dense<double>::create(context, input_rhs);
+
+    auto con = mtx->get_context();
+    auto queue = con->get_queue();
+
     // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner> precond;
@@ -90,44 +96,44 @@ int main(int argc, char* argv[]) {
         case 0:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<double, double, magma_int_t>::create(context);
+            precond = rls::preconditioner::gaussian<double, double, magma_int_t>::create(mtx);
             break;
         }
 
         case 1:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<float, double, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<float, double, magma_int_t>::create(mtx);
             break;
         }
         case 2:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<__half, double, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<__half, double, magma_int_t>::create(mtx);
             break;  
         }
         case 3:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
             break;
         }
         case 4:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<__half, float, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<__half, float, magma_int_t>::create(mtx);
             break;
         }
         case 5:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
             break;
         }
         case 6:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(context);
+            // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
             break;
         }
         default:
@@ -141,43 +147,43 @@ int main(int argc, char* argv[]) {
         case 0:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<double, double, magma_int_t>::create(precond.get(), tol, context);
+            solver = rls::solver::lsqr<double, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 1:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 2:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;  
         }
         case 3:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 4:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 5:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<__half, float, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<__half, float, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 6:
         {
             data_type_solver = FP64;
-            solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), tol, context);
+            // solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         default:
@@ -189,7 +195,7 @@ int main(int argc, char* argv[]) {
        return 0;
     }
 
-    solver->generate(input_mtx, input_rhs);
+    solver->generate();
     solver->run();
     return 0;
 }

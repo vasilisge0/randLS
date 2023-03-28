@@ -44,7 +44,9 @@ class generic_preconditioner {
 
         PrecondValueType get_precond_valuetype() { return type_selection_; }
 
-        virtual void generate();
+        virtual void generate() {}
+
+        virtual void compute() = 0;
 };
 
 
@@ -59,17 +61,16 @@ public:
 
     virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue) = 0;
 
-    virtual value_type* get_values() { return mtx_->get_values(); }
+    virtual value_type* get_values() { return precond_mtx_->get_values(); }
 
-    virtual dim2 get_size() { return mtx_->get_size(); }
+    virtual dim2 get_size() { return precond_mtx_->get_size(); }
 
-    std::shared_ptr<matrix::dense<value_type>> get_mtx() { return mtx_; }
+    std::shared_ptr<matrix::dense<value_type>> get_mtx() { return precond_mtx_; }
 
     virtual void generate(matrix::dense<value_type>* mtx_in) = 0;
 
     virtual void compute(matrix::dense<value_type>* mtx) = 0;
 
-    // virtual void compute() = 0;
 
     void set_type() {
         if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
@@ -95,6 +96,8 @@ public:
     }
 
 protected:
+    std::shared_ptr<matrix::dense<value_type>> precond_mtx_;
+    std::unique_ptr<matrix::dense<value_type_in>> precond_mtx_internal_;
     std::shared_ptr<matrix::dense<value_type>> mtx_;
     PrecondType precond_type_ = Undefined_PrecondType;
 };

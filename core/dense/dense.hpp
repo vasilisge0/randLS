@@ -26,11 +26,20 @@ class dense {
 public:
     dense() {}
 
+    dense(std::shared_ptr<Context> context) { context_ = context; }
+
     dense(dim2 size_in)
     {
         size = size_in;
     }
 
+    dense(const dense&& mtx) {
+        device = mtx.device;
+        size = mtx.size;
+        values = mtx.values;
+        mtx.values = nullptr;
+        context_ = mtx.context_;
+    }
 
     void generate(dim2 size_in)
     {
@@ -97,6 +106,13 @@ public:
         }
     }
 
+    static std::unique_ptr<dense<value_type>> create(std::shared_ptr<Context> context, std::string& filename_mtx) {
+        auto tmp = new dense<value_type>(context);
+        auto queue = context->get_queue();
+        tmp->generate(filename_mtx, queue);    
+        return std::unique_ptr<dense<value_type>>(tmp);
+    }
+
     value_type* get_values() { return values; }
 
     const value_type* get_const_values() const { return values; }
@@ -115,11 +131,15 @@ public:
         }
     }
 
+    std::shared_ptr<Context> get_context() {
+        return context_;
+    }
+
 private:
     DeviceType device;
     dim2 size;
     value_type* values = nullptr;
-
+    std::shared_ptr<Context> context_;
 };
 
 
