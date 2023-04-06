@@ -90,6 +90,14 @@ magma_int_t geqrf2_gpu(magma_int_t m, magma_int_t n, magmaDouble_ptr dA,
 magma_int_t geqrf2_gpu(magma_int_t m, magma_int_t n, magmaFloat_ptr dA,
                        magma_int_t ldda, float* tau, magma_int_t* info);
 
+double dot(magma_int_t n, magmaDouble_const_ptr dx, magma_int_t incx,
+    magmaDouble_const_ptr dy, magma_int_t incy, magma_queue_t queue);
+
+float dot(magma_int_t n, magmaFloat_const_ptr dx, magma_int_t incx,
+    magmaFloat_const_ptr dy, magma_int_t incy, magma_queue_t queue);
+
+float dot(magma_int_t n, const __half* dx, magma_int_t incx,
+    const __half* dy, magma_int_t incy, magma_queue_t queue);
 
 }  // namespace blas
 }  // namespace rls

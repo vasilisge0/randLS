@@ -114,9 +114,7 @@ public:
         precond_ = precond_in;
         tolerance_ = tolerance_in;
         type_ = LSQR;
-        std::cout << "in lsqr constructor\n";
         context_ = mtx->get_context();
-        std::cout << "after lsqr\n";
         use_precond_ = true;
         mtx_  = mtx;
         rhs_  = rhs;
@@ -153,7 +151,7 @@ public:
         double tolerance_in)
     {
         return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, mtx, rhs, tolerance_in));
-    } 
+    }
 
     static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
         create(preconditioner::generic_preconditioner* precond_in,
@@ -177,61 +175,54 @@ public:
         sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
         init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
 
-        // Initializes matrix and rhs.
+        // generates rhs and solution vectors
         auto num_rows = mtx_->get_size()[0];
         auto num_cols = mtx_->get_size()[1];
-
-        // generates rhs and solution vectors
         sol_->generate({num_cols, 1});
         sol_->zeros();          
-        init_sol_->generate({num_cols, 1});
-        init_sol_->zeros();          
 
         vectors_ = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
            new temp_vectors<value_type_in, value_type, index_type>(mtx_->get_size()));
 
         if (use_precond_) {
-            // auto this_precond = dynamic_cast<preconditioner::gaussian<value_type_in, value_type, index_type>*>(precond_);
             precond_->generate();
             precond_->compute();
-            // this_precond->generate(mtx_.get());
-            // this_precond->compute(mtx_.get());
         }
 
         max_iter_ = num_rows;
-    }    
+    }
 
-    void generate(std::string& filename_mtx, std::string& filename_rhs)
-    {
-        auto queue = context_->get_queue();
-        mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
+    //void generate(std::string& filename_mtx, std::string& filename_rhs)
+    //{
+    //    auto queue = context_->get_queue();
+    //    mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
+    //    sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
+    //    init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
+    //    rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
 
-        // Initializes matrix and rhs.
-        mtx_->generate(filename_mtx, queue);
-        auto num_rows = mtx_->get_size()[0];
-        auto num_cols = mtx_->get_size()[1];
+    //    // Initializes matrix and rhs.
+    //    mtx_->generate(filename_mtx, queue);
+    //    auto num_rows = mtx_->get_size()[0];
+    //    auto num_cols = mtx_->get_size()[1];
 
-        // generates rhs and solution vectors
-        sol_->generate({num_cols, 1});
-        sol_->zeros();          
-        init_sol_->generate({num_cols, 1});
-        init_sol_->zeros();          
-        rhs_->generate(filename_rhs, queue);
+    //    // generates rhs and solution vectors
+    //    sol_->generate({num_cols, 1});
+    //    sol_->zeros();          
+    //    init_sol_->generate({num_cols, 1});
+    //    init_sol_->zeros();          
+    //    rhs_->generate(filename_rhs, queue);
 
-        vectors_ = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
-           new temp_vectors<value_type_in, value_type, index_type>(mtx_->get_size()));
+    //    vectors_ = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
+    //       new temp_vectors<value_type_in, value_type, index_type>(mtx_->get_size()));
 
-        if (use_precond_) {
-            auto this_precond = dynamic_cast<preconditioner::gaussian<value_type_in, value_type, index_type>*>(precond_);
-            this_precond->generate(mtx_.get());
-            this_precond->compute(mtx_.get());
-        }
+    //    if (use_precond_) {
+    //        auto this_precond = dynamic_cast<preconditioner::gaussian<value_type_in, value_type, index_type>*>(precond_);
+    //        //this_precond->generate(mtx_.get());
+    //        this_precond->compute(mtx_.get());
+    //    }
 
-        max_iter_ = num_rows;
-    }    
+    //    max_iter_ = num_rows;
+    //}    
 
     ~lsqr() { }
 

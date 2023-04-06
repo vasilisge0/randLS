@@ -47,6 +47,7 @@ void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, float* mtx) {
     }
     fclose(file_handle);
 }
+
 void write_mtx(char* filename, magma_int_t m, magma_int_t n, double* mtx) {
     MM_typecode matcode;
     mm_initialize_typecode(&matcode);
@@ -98,13 +99,14 @@ void print_mtx(magma_int_t m, magma_int_t n, double* mtx, magma_int_t ld) {
     }
 }
 
-void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld, magma_queue_t queue)
-{  
+void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx,
+    magma_int_t ld, magma_queue_t queue)
+{
     double* t;
-    magma_malloc_cpu((void**)&t, num_rows * num_cols * sizeof(double));
+    magma_malloc_cpu((void**)&t, ld * num_cols * sizeof(double));
     magma_dgetmatrix(num_rows, num_cols, dmtx, ld,
-             t, num_rows, queue);
-    print_mtx(num_rows, num_cols, t, num_rows);
+             t, ld, queue);
+    print_mtx(num_rows, num_cols, t, ld);
     magma_free_cpu(t);
 }
 

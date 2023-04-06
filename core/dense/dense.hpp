@@ -1,24 +1,21 @@
-#ifndef DENSE_HPP
-#define DENSE_HPP
+#ifndef RLS_DENSE_HPP
+#define RLS_DENSE_HPP
 
 
 #include <iostream>
 #include <string>
 
 
+#include "../../cuda/solver/lsqr_kernels.cuh"
 #include "../../include/base_types.hpp"
 #include "../../utils/io.hpp"
 #include "../memory/memory.hpp"
-#include "../../cuda/solver/lsqr_kernels.cuh"
 
 
 namespace rls {
 namespace matrix {
 
-enum DeviceType{
-    CPU,
-    GPU
-};
+enum DeviceType { CPU, GPU };
 
 
 template <typename value_type>
@@ -28,12 +25,13 @@ public:
 
     dense(std::shared_ptr<Context> context) { context_ = context; }
 
-    dense(dim2 size_in)
-    {
+    dense(std::shared_ptr<Context> context, dim2 size_in) {
+        context_ = context;
         size = size_in;
     }
 
-    dense(const dense&& mtx) {
+    dense(const dense&& mtx)
+    {
         device = mtx.device;
         size = mtx.size;
         values = mtx.values;
@@ -99,17 +97,31 @@ public:
     void zeros_cpu()
     {
         if (values != nullptr) {
-           auto num_elems = size[0] * size[1];
-           for (auto i = 0; i < num_elems; i++) {
-               values[i] = 0.0;
-           }
+            auto num_elems = size[0] * size[1];
+            for (auto i = 0; i < num_elems; i++) {
+                values[i] = 0.0;
+            }
         }
     }
 
-    static std::unique_ptr<dense<value_type>> create(std::shared_ptr<Context> context, std::string& filename_mtx) {
+    static std::unique_ptr<dense<value_type>> create(std::shared_ptr<Context>
+        context) {
+        auto tmp = new dense<value_type>(context);
+        return std::unique_ptr<dense<value_type>>(tmp);
+    }
+
+    static std::unique_ptr<dense<value_type>> create(std::shared_ptr<Context>
+        context, dim2 size) {
+        auto tmp = new dense<value_type>(context, size);
+        return std::unique_ptr<dense<value_type>>(tmp);
+    }
+
+    static std::unique_ptr<dense<value_type>> create(
+        std::shared_ptr<Context> context, std::string& filename_mtx)
+    {
         auto tmp = new dense<value_type>(context);
         auto queue = context->get_queue();
-        tmp->generate(filename_mtx, queue);    
+        tmp->generate(filename_mtx, queue);
         return std::unique_ptr<dense<value_type>>(tmp);
     }
 
@@ -124,16 +136,13 @@ public:
         if (values != nullptr) {
             if (device == CPU) {
                 memory::free_cpu((magmaDouble_ptr)values);
-            }
-            else if (device == GPU) {
+            } else if (device == GPU) {
                 memory::free(values);
             }
         }
     }
 
-    std::shared_ptr<Context> get_context() {
-        return context_;
-    }
+    std::shared_ptr<Context> get_context() { return context_; }
 
 private:
     DeviceType device;

@@ -21,13 +21,13 @@ namespace preconditioner {
 
 template <typename value_type_internal, typename value_type,
           typename index_type>
-struct state{ 
+struct state{
     value_type_internal* dmtx_rp = nullptr;
     value_type_internal* dsketch_rp = nullptr;
     value_type_internal* dresult_rp = nullptr;
     value_type* tau = nullptr;
 
-    void allocate(index_type ld_mtx, index_type num_cols_mtx, 
+    void allocate(index_type ld_mtx, index_type num_cols_mtx,
         index_type num_rows_sketch, index_type num_cols_sketch, index_type ld_sketch,
         index_type ld_r_factor) {
         memory::malloc(&dmtx_rp, ld_mtx * num_cols_mtx);
@@ -83,22 +83,19 @@ template<typename value_type_in, typename value_type, typename index_type>
 class gaussian : public preconditioner<value_type_in, value_type, index_type> {
 public:
 
-    gaussian() { 
-        this->set_type();
+    gaussian() {
         this->precond_type_ = Gaussian;
         this->sampling_coeff_ = 1.5;
     }
 
-    gaussian(std::shared_ptr<matrix::dense<value_type>> mtx) { 
+    gaussian(std::shared_ptr<matrix::dense<value_type>> mtx) {
         this->mtx_ = mtx;
-        this->set_type();
         this->precond_type_ = Gaussian;
         this->sampling_coeff_ = 1.5;
         this->context_ = mtx->get_context();
     }
 
-    gaussian(std::shared_ptr<Context> context) { 
-        this->set_type();
+    gaussian(std::shared_ptr<Context> context) {
         this->precond_type_ = Gaussian;
         this->sampling_coeff_ = 1.5;
         this->context_ = context;
@@ -106,13 +103,11 @@ public:
 
     gaussian(matrix::dense<value_type>& sketch_mtx) {
         sketch_mtx_ = std::move(sketch_mtx);
-        this->set_type();
     }
 
     gaussian(std::shared_ptr<matrix::dense<value_type>> mtx,
         std::shared_ptr<matrix::dense<value_type>> sketch_mtx) {
 
-        this->set_type();
         this->mtx_ = mtx;
         this->sketch_mtx_ = sketch_mtx;
         auto size = this->mtx_->get_size();
@@ -147,7 +142,7 @@ public:
         auto size = this->mtx_->get_size();
 
         // Generates sketch matrix.
-        sketch_mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>({sampled_rows, num_rows}));
+        sketch_mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>(context, {sampled_rows, num_rows}));
         sketch_mtx_->generate();
         if (std::is_same<value_type, double>::value) {
             curandGenerateNormalDouble(
@@ -160,13 +155,13 @@ public:
         cudaDeviceSynchronize();
 
         // Construct preconditioner
-        this->precond_mtx_ = std::shared_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>({sampled_rows, size[1]}));
-        this->precond_mtx_internal_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>({sampled_rows, size[1]}));
-        dt_ = std::unique_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>(size));
-        mtx_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(size));
-        dsketch_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>({sampled_rows, size[0]}));
-        dresult_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>({sampled_rows, size[1]}));
-        tau_ = std::unique_ptr<matrix::dense<index_type>>(new matrix::dense<index_type>({size[0], 1}));
+        this->precond_mtx_ = std::shared_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>(context, {sampled_rows, size[1]}));
+        this->precond_mtx_internal_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(context, {sampled_rows, size[1]}));
+        dt_ = std::unique_ptr<matrix::dense<value_type>>(new matrix::dense<value_type>(context, size));
+        mtx_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(context, size));
+        dsketch_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(context, {sampled_rows, size[0]}));
+        dresult_rp_ = std::unique_ptr<matrix::dense<value_type_in>>(new matrix::dense<value_type_in>(context, {sampled_rows, size[1]}));
+        tau_ = std::unique_ptr<matrix::dense<index_type>>(new matrix::dense<index_type>(context, {size[0], 1}));
 
         // Generate matrices.
         this->precond_mtx_->generate();
@@ -262,7 +257,7 @@ public:
             dmtx->get_size()[0], dmtx->get_size()[1],
             dmtx->get_values(), dmtx->get_size()[0], this->precond_mtx_->get_values(),
             this->precond_mtx_->get_size()[0],
-            precond_state, 
+            precond_state,
             this->context_, &runtime_local, &t_mm, &t_qr);
         precond_state->free();
     }

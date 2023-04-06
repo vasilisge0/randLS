@@ -13,6 +13,7 @@
 #include "../cuda/preconditioner/preconditioner_kernels.cuh"
 #include "../core/preconditioner/preconditioner.hpp"
 #include "../core/preconditioner/gaussian.hpp"
+#include "../core/preconditioner/generalized_split.hpp"
 #include "../core/memory/magma_context.hpp"
 #include "../core/solver/lsqr.hpp"
 #include "../core/solver/fgmres.hpp"

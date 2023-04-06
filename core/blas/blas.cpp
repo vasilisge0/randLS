@@ -173,5 +173,32 @@ magma_int_t geqrf2_gpu(magma_int_t m, magma_int_t n, magmaFloat_ptr dA,
 }
 
 
+double dot(magma_int_t n, magmaDouble_const_ptr dx, magma_int_t incx,
+    magmaDouble_const_ptr dy, magma_int_t incy, magma_queue_t queue)	
+{
+    return magma_ddot(n, dx, incx, dy, incy, queue);
+}
+
+float dot(magma_int_t n, magmaFloat_const_ptr dx, magma_int_t incx,
+    magmaFloat_const_ptr dy, magma_int_t incy, magma_queue_t queue)	
+{
+    return magma_sdot(n, dx, incx, dy, incy, queue);
+}
+
+float dot(magma_int_t n, const __half* dx, magma_int_t incx,
+    const __half* dy, magma_int_t incy, magma_queue_t queue)	
+{
+    // __half* dc;
+    // memory::malloc(&dc, 1);
+    // magma_hgemm(MagmaNoTrans, MagmaNoTrans, 1, 1, n, 1.0, dx, n, dy, n, 1.0, dC,
+                // 1, queue);
+    // 
+    // memory::free(dc);
+    // return magma_sdot(n, dx, incx, dy, incy, queue);
+}
+
+
+
+
 }  // namespace blas
 }  // namespace rls

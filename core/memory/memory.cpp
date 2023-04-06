@@ -15,7 +15,8 @@ namespace memory {
 
 void malloc(magmaDouble_ptr* ptr, size_t n)
 {
-    magma_dmalloc(ptr, n);
+    auto status = magma_dmalloc(ptr, n);
+    std::cout << "malloc status: " << status << '\n';
 }
 
 void malloc(magmaFloat_ptr* ptr, size_t n) { magma_smalloc(ptr, n); }

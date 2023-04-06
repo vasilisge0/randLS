@@ -59,8 +59,6 @@ class generic_solver {
 public:
     virtual void generate() = 0;
 
-    virtual void generate(std::string& filename_mtx, std::string& filename_rhs) = 0;
-
     virtual void run() = 0;
 
     double get_tolerance() { return tolerance_; }

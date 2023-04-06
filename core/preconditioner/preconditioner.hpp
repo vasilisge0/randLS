@@ -29,7 +29,8 @@ enum PrecondValueType {
 
 enum PrecondType {
     Undefined_PrecondType, 
-    Gaussian
+    Gaussian,
+    GENERALIZED_SPLIT
 };
 
 
@@ -66,34 +67,6 @@ public:
     virtual dim2 get_size() { return precond_mtx_->get_size(); }
 
     std::shared_ptr<matrix::dense<value_type>> get_mtx() { return precond_mtx_; }
-
-    virtual void generate(matrix::dense<value_type>* mtx_in) = 0;
-
-    virtual void compute(matrix::dense<value_type>* mtx) = 0;
-
-
-    void set_type() {
-        if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
-        {
-            type_selection_ = FP64_FP64;
-        }
-        else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(double)))
-        {
-            type_selection_ = FP32_FP64;
-        }
-        else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(double)))
-        {
-            type_selection_ = FP16_FP64;
-        }
-        else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(float)))
-        {
-            type_selection_ = FP32_FP32;
-        }
-        else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(float)))
-        {
-            type_selection_ = FP16_FP32;
-        }
-    }
 
 protected:
     std::shared_ptr<matrix::dense<value_type>> precond_mtx_;

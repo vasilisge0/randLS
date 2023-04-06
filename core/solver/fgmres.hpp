@@ -4,12 +4,15 @@
 
 #include <iostream>
 #include <memory>
+#include <vector>
 
 
 #include "../include/base_types.hpp"
-#include "solver.hpp"
-#include "../preconditioner/preconditioner.hpp"
 #include "../preconditioner/gaussian.hpp"
+#include "../preconditioner/preconditioner.hpp"
+
+
+#include "solver.hpp"
 
 
 namespace rls {
@@ -17,36 +20,75 @@ namespace solver {
 namespace fgmres {
 
 
-template<typename value_type_in, typename value_type, typename index_type>
-struct temp_vectors{
+// Vectors used by Fgmres method.
+template <typename value_type_in, typename value_type, typename index_type>
+struct temp_vectors {
+    std::shared_ptr<Context> context_;
+    index_type max_iter_;
     value_type* u;
-    value_type* v;
+    value_type* v_basis;
     value_type* w;
     value_type* temp;
+    value_type* residual;
     value_type_in* u_in;
     value_type_in* v_in;
     value_type_in* temp_in;
     value_type_in* mtx_in;
+    value_type* hessenberg_mtx;
+    value_type* hessenberg_mtx_gpu;
+    value_type* hessenberg_rhs_gpu;
+    value_type* z_basis;
     index_type inc = 1;
 
-    temp_vectors(dim2 size) {
-        memory::malloc(&u, size[0]);
-        memory::malloc(&v, size[0]);
-        memory::malloc(&w, size[0]);
-        memory::malloc(&temp, size[0]);
+    std::shared_ptr<std::vector<std::pair<value_type, value_type>>>
+        givens_cache;
+    std::shared_ptr<matrix::dense<value_type>> tmp_cpu;
+    value_type* hessenberg_rhs;
+
+    temp_vectors(std::shared_ptr<Context> context, dim2 size, int max_iter, magma_queue_t& queue)
+    {
+        context_ = context;
+        max_iter_ = size[1];
+std::cout << "max_iter: " << max_iter_ << ", size[1]: " << size[1] << '\n';
+        auto global_len = size[0] + size[1];
+        memory::malloc(&u, global_len);
+std::cout << "allocating v_basis, global_len * (max_iter_ + 1): " << global_len * (max_iter_ + 1) << '\n';
+        memory::malloc(&v_basis, global_len * (max_iter_ + 1));
+std::cout << "v: (after)" << '\n';
+io::print_mtx_gpu(2, 1, v_basis, 2, queue);
+        memory::malloc(&z_basis, global_len * (max_iter_ + 1));
+        memory::malloc(&w, global_len);
+        memory::malloc(&temp, global_len);
+        memory::malloc(&hessenberg_mtx_gpu, max_iter_ * (max_iter_ + 1));
+        memory::malloc(&hessenberg_rhs_gpu, (max_iter_ + 1));
+        memory::malloc_cpu(&hessenberg_mtx, max_iter_ * (max_iter_ + 1));
+        memory::malloc_cpu(&hessenberg_rhs, max_iter_ + 1);
+        memory::malloc(&residual, global_len);
         if (!std::is_same<value_type_in, value_type>::value) {
-            memory::malloc(&u_in, size[0]);
-            memory::malloc(&v_in, size[0]);
-            memory::malloc(&temp_in, size[0]);
-            memory::malloc(&mtx_in, size[0] * size[1]);
+            memory::malloc(&u_in, global_len);
+            memory::malloc(&v_in, global_len);
+            memory::malloc(&temp_in, global_len);
+            memory::malloc(&mtx_in, global_len * size[1]);
         }
+
+        givens_cache = std::shared_ptr<std::vector<std::pair<value_type, value_type>>>(new std::vector<std::pair<value_type, value_type>>);
+        givens_cache->resize(static_cast<size_t>(max_iter_ + 1));
+        tmp_cpu = matrix::dense<value_type>::create(context, {max_iter_ + 1, 1});
+        tmp_cpu->generate_cpu();
     }
 
-    ~temp_vectors() {
+    ~temp_vectors()
+    {
         memory::free(u);
-        memory::free(v);
+        memory::free(v_basis);
+        memory::free(z_basis);
         memory::free(w);
         memory::free(temp);
+        memory::free(hessenberg_mtx_gpu);
+        memory::free(hessenberg_rhs_gpu);
+        memory::free_cpu(hessenberg_mtx);
+        memory::free_cpu(hessenberg_rhs);
+        memory::free(residual);
         if (!std::is_same<value_type_in, value_type>::value) {
             memory::free(u_in);
             memory::free(v_in);
@@ -56,172 +98,204 @@ struct temp_vectors{
     }
 };
 
-template<typename value_type_in, typename value_type, typename index_type>
-struct temp_scalars{
+// Scalars used by Fgmres method
+template <typename value_type, typename index_type>
+struct temp_scalars {
     value_type alpha;
     value_type beta;
     value_type rho_bar;
     value_type phi_bar;
+    value_type h;
     int* p = nullptr;
+};
 
-    temp_scalars() {}
-    ~temp_scalars() {}
-};    
-
-
-} // namespace fgmres
-
-
+// Specialized gemv operation for Fgmres on the generalized system
+// [I A; A' 0] for input m x n matrix A and m >> n.
 template <typename value_type, typename index_type>
-void run(index_type num_rows, index_type num_cols, value_type* mtx,
-          value_type* rhs, value_type* init_sol, value_type* sol,
-          index_type max_iter, index_type* iter, value_type tol,
-          double* resnorm, magma_queue_t queue);
+void gemv(magma_trans_t trans, index_type num_rows, index_type num_cols,
+          value_type alpha, value_type* mtx, index_type ld,
+          value_type* u_vector, index_type inc_u, value_type beta,
+          value_type* v_vector, index_type inc_v, value_type* tmp,
+          magma_queue_t queue)
+{
+    // Dereference the 2 vector parts.
+    auto u0 = u_vector;
+    auto u1 = &u_vector[num_rows];
+    auto v0 = v_vector;
+    auto v1 = &v_vector[num_rows];
+    //auto tmp_alpha = -alpha;
+    auto tmp_alpha = alpha;
 
-template <typename value_type_in, typename value_type, typename index_type>
-void run(index_type num_rows, index_type num_cols, value_type* mtx,
-          value_type* rhs, value_type* init_sol, value_type* sol,
-          index_type max_iter, index_type* iter, value_type tol,
-          double* resnorm, value_type* precond_mtx, index_type ld_precond,
-          magma_queue_t queue, double* t_solve);
+    // Compute first part (indices 0:(m-1))
+    blas::copy(num_rows, v0, inc_v, tmp, inc_v, queue);
+    blas::copy(num_rows, u0, inc_u, v0, inc_v, queue);
+    blas::gemv(MagmaNoTrans, num_rows, num_cols, tmp_alpha, mtx, num_rows, u1,
+               inc_u, tmp_alpha, v0, inc_v, queue);
+    blas::axpy(num_rows, beta, tmp, inc_v, v0, inc_v, queue);
 
-template <typename value_type_in, typename value_type, typename index_type>
-void initialize(dim2 size, value_type* mtx, value_type* rhs,
-                value_type* precond_mtx, index_type ld_precond,
-                temp_scalars<value_type, index_type>* scalars,
-                temp_vectors<value_type_in, value_type, index_type>* vectors,
-                magma_queue_t queue, double* t_solve);
+    // Compute second part (indices m:m+n)
+    blas::gemv(MagmaTrans, num_rows, num_cols, -1.0, mtx, num_rows, u0, inc_u,
+               beta, v1, inc_v, queue);
+}
+
+
+}  // namespace fgmres
+
+
+// Executes fgmres algorithm.
+//template <typename value_type_in, typename value_type, typename index_type>
+//void run_fgmres(
+//    matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
+//    matrix::dense<value_type>* sol,
+//    preconditioner::preconditioner<value_type_in, value_type, index_type>*
+//        precond,
+//    fgmres::temp_scalars<value_type, index_type>* scalars,
+//    fgmres::temp_vectors<value_type_in, value_type, index_type>* vectors,
+//    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+//    magma_queue_t queue, double* t_solve);
 
 template <typename value_type_in, typename value_type, typename index_type>
 void run_fgmres(
-    matrix::dense<value_type>* mtx,
-    matrix::dense<value_type>* rhs,
+    matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
     matrix::dense<value_type>* sol,
-    preconditioner::preconditioner<value_type_in, value_type, index_type>* precond,
-    temp_scalars<value_type, index_type>* scalars,
-    temp_vectors<value_type_in, value_type, index_type>* vectors,
-    magma_int_t max_iter, double tolerance,
-    magma_int_t* iter, double* resnorm, magma_queue_t queue, double* t_solve);
+    preconditioner::preconditioner<value_type_in, value_type, index_type>*
+        precond,
+    fgmres::temp_scalars<value_type, index_type>* scalars,
+    fgmres::temp_vectors<value_type_in, value_type, index_type>* vectors,
+    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+    magma_queue_t queue, double* t_solve);
 
 
-template<typename value_type_in, typename value_type,
-         typename index_type>
+
+template <typename value_type_in, typename value_type, typename index_type>
 class Fgmres : public generic_solver {
 public:
 
-
-    Fgmres() {
-        this->type_ = FGMRES;
-        this->set_type();
-    }
-
     Fgmres(preconditioner::generic_preconditioner* precond_in,
-        double tolerance_in,
-        std::shared_ptr<Context> context) {
+           double tolerance_in, std::shared_ptr<Context> context)
+    {
+        context_ = context;
         precond_ = precond_in;
         tolerance_ = tolerance_in;
-        type_ = FGMRES;
-        context_ = context;
         use_precond_ = true;
-        this->set_type();
     }
 
     Fgmres(preconditioner::generic_preconditioner* precond_in,
-        double tolerance_in, int max_iter_in,
-        std::shared_ptr<Context> context) {
+           double tolerance_in, int max_iter_in,
+           std::shared_ptr<Context> context)
+    {
+        context_ = context;
         tolerance_ = tolerance_in;
         max_iter_ = max_iter_in;
-        type_ = FGMRES;
-        context_ = context;
         use_precond_ = true;
-        this->set_type();
     }
 
+    Fgmres(preconditioner::generic_preconditioner* precond_in,
+           std::shared_ptr<matrix::dense<value_type>> mtx,
+           std::shared_ptr<matrix::dense<value_type>> rhs,
+           double tolerance_in) {
+
+        precond_ = precond_in;
+        this->mtx_ = mtx;
+        this->rhs_ = rhs;
+        tolerance_ = tolerance_in;
+        context_ = mtx->get_context();
+        max_iter_ = mtx_->get_size()[1];
+        use_precond_ = true;
+        auto num_rows = this->mtx_->get_size()[0];
+        auto num_cols = this->mtx_->get_size()[1];
+    }
+
+    // Create method (1) of Fgmres solver
+    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
+    create(preconditioner::generic_preconditioner* precond_in,
+           double tolerance_in, std::shared_ptr<Context> context)
+    {
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(
+            new Fgmres<value_type_in, value_type, index_type>(
+                precond_in, tolerance_in, context));
+    }
+
+    // Create method (2) of Fgmres solver
+    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
+    create(preconditioner::generic_preconditioner* precond_in,
+           double tolerance_in, int max_iter_in,
+           std::shared_ptr<Context> context)
+    {
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(
+            new Fgmres<value_type_in, value_type, index_type>(
+                precond_in, tolerance_in, max_iter_in, context));
+    }
+
+
+    // Create method (3) of Fgmres solver.
     static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
         create(preconditioner::generic_preconditioner* precond_in,
-        double tolerance_in,
-        std::shared_ptr<Context> context)
+        std::shared_ptr<matrix::dense<value_type>> mtx,
+        std::shared_ptr<matrix::dense<value_type>> rhs,
+        double tolerance_in)
     {
-        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(new Fgmres<value_type_in, value_type, index_type>(precond_in, tolerance_in, context));
-    } 
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(new Fgmres<value_type_in, value_type, index_type>(precond_in, mtx, rhs, tolerance_in));
+    }
 
-    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
-        create(preconditioner::generic_preconditioner* precond_in,
-        double tolerance_in, int max_iter_in,
-        std::shared_ptr<Context> context)
-    {
-        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(new Fgmres<value_type_in, value_type, index_type>(precond_in, tolerance_in, max_iter_in, context));
-    } 
-
-    void generate(std::string& filename_mtx, std::string& filename_rhs)
+    // Allocates matrices used in fgmres and constructs preconditioner.
+    void generate()
     {
         auto queue = context_->get_queue();
-        mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        auto tmp_rhs = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-
-        // Initializes matrix and rhs.
-        mtx_->generate(filename_mtx, queue);
-        auto num_rows = mtx_->get_size()[0];
-        auto num_cols = mtx_->get_size()[1];
+        sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(
+            new rls::matrix::dense<value_type>());
+        glb_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(
+            new rls::matrix::dense<value_type>());
+        glb_rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(
+            new rls::matrix::dense<value_type>());
+        auto tmp_rhs = std::shared_ptr<rls::matrix::dense<value_type>>(
+            new rls::matrix::dense<value_type>());
 
         // generates rhs and solution vectors
-        sol_->generate({num_rows + num_cols, 1});
-        sol_->zeros();          
-        tmp_rhs->generate(filename_rhs, queue);
-        rhs_->generate({num_rows + num_cols, 1});
-        rhs_->zeros();          
-        blas::copy(num_rows, tmp_rhs->get_values(), 1, rhs_->get_values(), 1,
-            this->context_->get_queue());
+        auto num_rows = this->mtx_->get_size()[0];
+        auto num_cols = this->mtx_->get_size()[1];
+        auto global_len = num_rows + num_cols;
+        sol_->generate({global_len, 1});
+        sol_->zeros();
+        glb_sol_->generate({global_len, 1});
+        glb_rhs_->generate({global_len, 1});
+        glb_rhs_->zeros();
 
+        auto norm_rhs =
+        blas::norm2(num_rows, rhs_->get_values(), 1, queue);
+        blas::copy(num_rows, rhs_->get_values(), 1, glb_rhs_->get_values(),
+                   1, queue);
 
-        vectors_ = std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type>>(
-           new temp_vectors<value_type_in, value_type, index_type>(mtx_->get_size()));
+        blas::copy(num_cols, sol_->get_values(), 1,
+            &glb_rhs_->get_values()[num_rows], 1, queue);
+        auto norm_rhs2 = blas::norm2(global_len, glb_rhs_->get_values(), 1,
+            queue);
 
+        max_iter_ = num_cols;
+
+        vectors_ = std::shared_ptr<
+            fgmres::temp_vectors<value_type_in, value_type, index_type>>(
+            new fgmres::temp_vectors<value_type_in, value_type, index_type>(
+                context_, mtx_->get_size(), max_iter_, queue));
+
+        dim2 h_size = {max_iter_ + 1, 1};
         if (use_precond_) {
-            // auto this_precond = dynamic_cast<preconditioner::gaussian<value_type_in, value_type, index_type>*>(precond_);
-            // this_precond->generate(mtx_.get());
-            // this_precond->compute(mtx_.get());
+            precond_->generate();
+            precond_->compute();
         }
 
-        max_iter_ = num_rows;
-    }    
-
-    // ~fgmres() { }
-
-    // void set_type() {
-    //     if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
-    //     {
-    //         combined_value_type_ = FP64_FP64;
-    //     }
-    //     else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(double)))
-    //     {
-    //         combined_value_type_ = FP32_FP64;
-    //     }
-    //     else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(double)))
-    //     {
-    //         combined_value_type_ = FP16_FP64;
-    //     }
-    //     else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(float)))
-    //     {
-    //         combined_value_type_ = FP32_FP32;
-    //     }
-    //     else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(float)))
-    //     {
-    //         combined_value_type_ = FP16_FP32;
-    //     }
-    // }
+    }
 
     void run()
     {
         auto context = this->context_;
         if (use_precond_) {
-            // run_fgmres(mtx_.get(), rhs_.get(), sol_.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type>*>(precond_),
-                // &scalars_, vectors_.get(), this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_, context_->get_queue(), &t_solve_);
-        }
-        else {
+            run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
+                static_cast<preconditioner::preconditioner<value_type_in,
+                value_type, index_type>*>(precond_), &scalars_, vectors_.get(),
+                this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
+                context_->get_queue(), &t_solve_);
+        } else {
             // Run non-preconditioned FGMRES.
         }
     }
@@ -233,20 +307,21 @@ private:
     magma_int_t iter_;
     double resnorm_;
     double t_solve_;
-    std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type>> vectors_;
-    // temp_scalars<value_type, index_type> scalars_;
+    std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type>>
+        vectors_;
+    fgmres::temp_scalars<value_type, index_type> scalars_;
     preconditioner::generic_preconditioner* precond_;
     std::shared_ptr<matrix::dense<value_type>> mtx_;
     std::shared_ptr<matrix::dense<value_type>> dmtx_;
     std::shared_ptr<matrix::dense<value_type>> rhs_;
     std::shared_ptr<matrix::dense<value_type>> sol_;
-    std::shared_ptr<matrix::dense<value_type>> init_sol_;
-
+    std::shared_ptr<matrix::dense<value_type>> glb_rhs_;
+    std::shared_ptr<matrix::dense<value_type>> glb_sol_;
 };
 
 
-}   // end of solver namespace
-}   // end of fgmres namespace
+}  // namespace solver
+}  // namespace rls
 
 
 #endif  // RLS_FGMRES_HPP
