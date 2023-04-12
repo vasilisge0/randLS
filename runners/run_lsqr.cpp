@@ -81,17 +81,14 @@ int main(int argc, char* argv[]) {
     enum GlobalDataType data_type_precond;
     enum GlobalDataType data_type_solver;
 
-    std::shared_ptr<rls::Context> context = rls::Context::create();
+    std::shared_ptr<rls::Context<rls::CUDA>> context = rls::Context<rls::CUDA>::create();
 
-    std::shared_ptr<rls::matrix::dense<double>> mtx = rls::matrix::dense<double>::create(context, input_mtx);
-    std::shared_ptr<rls::matrix::dense<double>> rhs = rls::matrix::dense<double>::create(context, input_rhs);
-
-    auto con = mtx->get_context();
-    auto queue = con->get_queue();
+    std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> mtx = rls::matrix::Dense<double, rls::CUDA>::create(context, input_mtx);
+    std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> rhs = rls::matrix::Dense<double, rls::CUDA>::create(context, input_rhs);
 
     // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
-    std::shared_ptr<rls::preconditioner::generic_preconditioner> precond;
+    std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
     switch (precond_prec_type) {
         case 0:
         {
@@ -142,7 +139,7 @@ int main(int argc, char* argv[]) {
 
     // Decides the precision of the solver preconditioner depending on the inputs.
     auto solver_prec_type = precision_parser(input_solver_prec, input_solver_in_prec);
-    std::shared_ptr<rls::solver::generic_solver> solver;
+    std::shared_ptr<rls::solver::generic_solver<rls::CUDA>> solver;
     switch (solver_prec_type) {
         case 0:
         {

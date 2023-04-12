@@ -64,7 +64,7 @@ struct temp_scalars{
 
     temp_scalars() {}
     ~temp_scalars() {}
-};    
+};
 
 template <typename value_type, typename index_type>
 void run(index_type num_rows, index_type num_cols, value_type* mtx,
@@ -86,12 +86,12 @@ void initialize(dim2 size, value_type* mtx, value_type* rhs,
                 temp_vectors<value_type_in, value_type, index_type>* vectors,
                 magma_queue_t queue, double* t_solve);
 
-template <typename value_type_in, typename value_type, typename index_type>
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
 void run_lsqr(
-    matrix::dense<value_type>* mtx,
-    matrix::dense<value_type>* rhs,
-    matrix::dense<value_type>* sol,
-    preconditioner::preconditioner<value_type_in, value_type, index_type>* precond,
+    matrix::Dense<value_type, device_type>* mtx,
+    matrix::Dense<value_type, device_type>* rhs,
+    matrix::Dense<value_type, device_type>* sol,
+    preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>* precond,
     temp_scalars<value_type, index_type>* scalars,
     temp_vectors<value_type_in, value_type, index_type>* vectors,
     magma_int_t max_iter, double tolerance,
@@ -99,87 +99,84 @@ void run_lsqr(
 
 
 template<typename value_type_in, typename value_type,
-         typename index_type>
-class lsqr : public generic_solver {
+         typename index_type, ContextType device_type=CUDA>
+class lsqr : public generic_solver<device_type> {
 public:
     lsqr() {
         this->type_ = LSQR;
         this->set_type();
     }
 
-    lsqr(preconditioner::generic_preconditioner* precond_in,
-        std::shared_ptr<matrix::dense<value_type>> mtx,
-        std::shared_ptr<matrix::dense<value_type>> rhs,
+    lsqr(preconditioner::generic_preconditioner<device_type>* precond_in,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> rhs,
         double tolerance_in) {
         precond_ = precond_in;
-        tolerance_ = tolerance_in;
-        type_ = LSQR;
-        context_ = mtx->get_context();
-        use_precond_ = true;
+        this->tolerance_ = tolerance_in;
+        this->type_ = LSQR;
+        this->context_ = mtx->get_context();
+        this->use_precond_ = true;
         mtx_  = mtx;
         rhs_  = rhs;
         this->set_type();
-        auto queue = context_->get_queue();
+        auto queue = this->context_->get_queue();
     }
 
-    lsqr(preconditioner::generic_preconditioner* precond_in,
+    lsqr(preconditioner::generic_preconditioner<device_type>* precond_in,
         double tolerance_in,
-        std::shared_ptr<Context> context) {
+        std::shared_ptr<Context<device_type>> context) {
         precond_ = precond_in;
-        tolerance_ = tolerance_in;
-        type_ = LSQR;
-        context_ = context;
+        this->tolerance_ = tolerance_in;
+        this->type_ = LSQR;
+        this->context_ = context;
         use_precond_ = true;
         this->set_type();
     }
 
-    lsqr(preconditioner::generic_preconditioner* precond_in,
+    lsqr(preconditioner::generic_preconditioner<device_type>* precond_in,
         double tolerance_in, int max_iter_in,
-        std::shared_ptr<Context> context) {
-        tolerance_ = tolerance_in;
-        max_iter_ = max_iter_in;
-        type_ = LSQR;
-        context_ = context;
+        std::shared_ptr<Context<device_type>> context) {
+        this->tolerance_ = tolerance_in;
+        this->max_iter_ = max_iter_in;
+        this->type_ = LSQR;
+        this->context_ = context;
         use_precond_ = true;
         this->set_type();
     }
 
     static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
-        create(preconditioner::generic_preconditioner* precond_in,
-        std::shared_ptr<matrix::dense<value_type>> mtx,
-        std::shared_ptr<matrix::dense<value_type>> rhs,
+        create(preconditioner::generic_preconditioner<device_type>* precond_in,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> rhs,
         double tolerance_in)
     {
         return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, mtx, rhs, tolerance_in));
     }
 
     static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
-        create(preconditioner::generic_preconditioner* precond_in,
+        create(preconditioner::generic_preconditioner<device_type>* precond_in,
         double tolerance_in,
-        std::shared_ptr<Context> context)
+        std::shared_ptr<Context<device_type>> context)
     {
         return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, tolerance_in, context));
     } 
 
     static std::unique_ptr<lsqr<value_type_in, value_type, index_type>>
-        create(preconditioner::generic_preconditioner* precond_in,
+        create(preconditioner::generic_preconditioner<device_type>* precond_in,
         double tolerance_in, int max_iter_in,
-        std::shared_ptr<Context> context)
+        std::shared_ptr<Context<device_type>> context)
     {
         return std::unique_ptr<lsqr<value_type_in, value_type, index_type>>(new lsqr<value_type_in, value_type, index_type>(precond_in, tolerance_in, max_iter_in, context));
-    } 
+    }
 
     void generate()
     {
-        auto queue = context_->get_queue();
-        sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-        init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-
         // generates rhs and solution vectors
+        auto queue = this->context_->get_queue();
         auto num_rows = mtx_->get_size()[0];
         auto num_cols = mtx_->get_size()[1];
-        sol_->generate({num_cols, 1});
-        sol_->zeros();          
+        sol_ = matrix::Dense<value_type, device_type>::create(this->context_, {num_cols, 1});
+        sol_->zeros();
 
         vectors_ = std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>>(
            new temp_vectors<value_type_in, value_type, index_type>(mtx_->get_size()));
@@ -189,16 +186,16 @@ public:
             precond_->compute();
         }
 
-        max_iter_ = num_rows;
+        this->max_iter_ = num_rows;
     }
 
     //void generate(std::string& filename_mtx, std::string& filename_rhs)
     //{
     //    auto queue = context_->get_queue();
-    //    mtx_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-    //    sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-    //    init_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
-    //    rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(new rls::matrix::dense<value_type>());
+    //    mtx_ = std::shared_ptr<rls::matrix::Dense<value_type, device_type>>(new rls::matrix::Dense<value_type, device_type>());
+    //    sol_ = std::shared_ptr<rls::matrix::Dense<value_type, device_type>>(new rls::matrix::Dense<value_type, device_type>());
+    //    init_sol_ = std::shared_ptr<rls::matrix::Dense<value_type, device_type>>(new rls::matrix::Dense<value_type, device_type>());
+    //    rhs_ = std::shared_ptr<rls::matrix::Dense<value_type, device_type>>(new rls::matrix::Dense<value_type, device_type>());
 
     //    // Initializes matrix and rhs.
     //    mtx_->generate(filename_mtx, queue);
@@ -229,23 +226,23 @@ public:
     void set_type() {
         if ((typeid(value_type_in) == typeid(double)) && (typeid(value_type_in) == typeid(double)))
         {
-            combined_value_type_ = FP64_FP64;
+            this->combined_value_type_ = FP64_FP64;
         }
         else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(double)))
         {
-            combined_value_type_ = FP32_FP64;
+            this->combined_value_type_ = FP32_FP64;
         }
         else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(double)))
         {
-            combined_value_type_ = FP16_FP64;
+            this->combined_value_type_ = FP16_FP64;
         }
         else if ((typeid(value_type_in) == typeid(float)) && (typeid(value_type_in) == typeid(float)))
         {
-            combined_value_type_ = FP32_FP32;
+            this->combined_value_type_ = FP32_FP32;
         }
         else if ((typeid(value_type_in) == typeid(__half)) && (typeid(value_type_in) == typeid(float)))
         {
-            combined_value_type_ = FP16_FP32;
+            this->combined_value_type_ = FP16_FP32;
         }
     }
 
@@ -253,8 +250,8 @@ public:
     {
         auto context = this->context_;
         if (use_precond_) {
-            run_lsqr(mtx_.get(), rhs_.get(), sol_.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type>*>(precond_),
-                &scalars_, vectors_.get(), this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_, context_->get_queue(), &t_solve_);
+            run_lsqr(mtx_.get(), rhs_.get(), sol_.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>*>(precond_),
+               &scalars_, vectors_.get(), this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_, this->context_->get_queue(), &t_solve_);
         }
         else {
             // Run non-preconditioned LSQR.
@@ -271,12 +268,12 @@ private:
     double t_solve_;
     std::shared_ptr<temp_vectors<value_type_in, value_type, index_type>> vectors_;
     temp_scalars<value_type, index_type> scalars_;
-    preconditioner::generic_preconditioner* precond_;
-    std::shared_ptr<matrix::dense<value_type>> mtx_;
-    std::shared_ptr<matrix::dense<value_type>> dmtx_;
-    std::shared_ptr<matrix::dense<value_type>> rhs_;
-    std::shared_ptr<matrix::dense<value_type>> sol_;
-    std::shared_ptr<matrix::dense<value_type>> init_sol_;
+    preconditioner::generic_preconditioner<device_type>* precond_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> mtx_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> dmtx_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> rhs_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> sol_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> init_sol_;
 };
 
 

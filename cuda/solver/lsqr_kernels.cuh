@@ -30,34 +30,34 @@ __global__ void default_solution_initialization_kernel(index_type num_rows,
 
 
 template <typename value_type_internal, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type=CUDA>
 void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_sketch, value_type* dsketch,
                              index_type ld_sketch, index_type num_rows_mtx,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             std::shared_ptr<Context> info);
+                             std::shared_ptr<Context<device_type>> info);
 
 template <typename value_type_internal, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type=CUDA>
 void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_sketch, value_type* dsketch,
                              index_type ld_sketch, index_type num_rows_mtx,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             std::shared_ptr<Context> info);
+                             std::shared_ptr<Context<device_type>> info);
 
 template <typename value_type_internal, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type=CUDA>
 void generate_preconditioner(index_type num_rows_sketch,
                              index_type num_cols_sketch, value_type* dsketch,
                              index_type ld_sketch, index_type num_rows_mtx,
                              index_type num_cols_mtx, value_type* dmtx,
                              index_type ld_mtx, value_type* dr_factor,
                              index_type ld_r_factor, value_type* hat_mtx,
-                             std::shared_ptr<Context> info);
+                             std::shared_ptr<Context<device_type>> info);
 
 void generate_preconditioner_half(magma_int_t size_sketch[2],
                                   magmaDouble_ptr sketch,

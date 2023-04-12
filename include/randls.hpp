@@ -17,6 +17,7 @@
 #include "../core/memory/magma_context.hpp"
 #include "../core/solver/lsqr.hpp"
 #include "../core/solver/fgmres.hpp"
+#include "../core/solver/ir.hpp"
 #include "../cuda/solver/lsqr_kernels.cuh"
 #include "../core/dense/dense.hpp"
 

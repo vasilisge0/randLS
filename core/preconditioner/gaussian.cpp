@@ -13,11 +13,11 @@ namespace preconditioner {
 
 
 template <typename value_type_in, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type>
 void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx, value_type* dmtx, index_type ld_mtx,
               value_type* dr_factor, index_type ld_r_factor,
-              value_type* hat_mtx, std::shared_ptr<Context> info)
+              value_type* hat_mtx, std::shared_ptr<Context<device_type>> info)
 {
     // // Performs matrix-matrix multiplication in value_type_in precision
     // // and promotes output to value_type precision.
@@ -64,13 +64,13 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch, val
 }
 
 template <typename value_type_in, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type>
 void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
               value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor, value_type* hat_mtx,
-              std::shared_ptr<Context> info, double* runtime)
+              std::shared_ptr<Context<device_type>> info, double* runtime)
 {
     // // Performs matrix-matrix multiplication in value_type_in precision
     // // and promotes output to value_type precision.
@@ -127,79 +127,79 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
 }
 
 
-template void compute_precond<__half, double, magma_int_t>(
+template void compute_precond<__half, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info);
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info);
 
-template void compute_precond<__half, float, magma_int_t>(
+template void compute_precond<__half, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    float* hat_mtx, std::shared_ptr<Context> info);
+    float* hat_mtx, std::shared_ptr<Context<CUDA>> info);
 
-template void compute_precond<float, double, magma_int_t>(
+template void compute_precond<float, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info);
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info);
 
-template void compute_precond<float, float, magma_int_t>(
+template void compute_precond<float, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    float* hat_mtx, std::shared_ptr<Context> info);
+    float* hat_mtx, std::shared_ptr<Context<CUDA>> info);
 
-template void compute_precond<double, double, magma_int_t>(
+template void compute_precond<double, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info);
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info);
 
-template void compute_precond<__half, double, magma_int_t>(
+template void compute_precond<__half, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info,
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info,
     double* runtime);
 
-template void compute_precond<__half, float, magma_int_t>(
+template void compute_precond<__half, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    float* hat_mtx, std::shared_ptr<Context> info, double* runtime);
+    float* hat_mtx, std::shared_ptr<Context<CUDA>> info, double* runtime);
 
-template void compute_precond<float, double, magma_int_t>(
+template void compute_precond<float, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info,
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info,
     double* runtime);
 
-template void compute_precond<float, float, magma_int_t>(
+template void compute_precond<float, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    float* hat_mtx, std::shared_ptr<Context> info, double* runtime);
+    float* hat_mtx, std::shared_ptr<Context<CUDA>> info, double* runtime);
 
-template void compute_precond<double, double, magma_int_t>(
+template void compute_precond<double, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context> info,
+    magma_int_t ld_r_factor, double* hat_mtx, std::shared_ptr<Context<CUDA>> info,
     double* runtime);
 
 // Generates the preconditioner and measures runtime.
 template <typename value_type_internal, typename value_type,
-          typename index_type>
+          typename index_type, ContextType device_type=CUDA>
 void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
               value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
               index_type ld_r_factor,
-              state<value_type_internal, value_type, index_type>* precond_state, 
-              std::shared_ptr<Context> context, double* runtime, double* t_mm,
+              state<value_type_internal, value_type, index_type, device_type>* precond_state, 
+              std::shared_ptr<Context<device_type>> context, double* runtime, double* t_mm,
               double* t_qr)
 {
     // Performs matrix-matrix multiplication in value_type_internal precision
@@ -247,39 +247,39 @@ void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
     memory::free_cpu(tau);
 }
 
-template void generate_old<__half, double, magma_int_t>(
+template void generate_old<__half, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_faclor, state<__half, double, magma_int_t>* precond_state, std::shared_ptr<Context> info,
+    magma_int_t ld_r_faclor, state<__half, double, magma_int_t, CUDA>* precond_state, std::shared_ptr<Context<CUDA>> info,
     double* runtime, double* t_mm, double* t_qr);
 
-template void generate_old<__half, float, magma_int_t>(
+template void generate_old<__half, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    state<__half, float, magma_int_t>* precond_state, std::shared_ptr<Context> info, double* runtime, double* t_mm,
+    state<__half, float, magma_int_t, CUDA>* precond_state, std::shared_ptr<Context<CUDA>> info, double* runtime, double* t_mm,
     double* t_qr);
 
-template void generate_old<float, double, magma_int_t>(
+template void generate_old<float, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, state<float, double, magma_int_t>* precond_state, std::shared_ptr<Context> info,
+    magma_int_t ld_r_factor, state<float, double, magma_int_t, CUDA>* precond_state, std::shared_ptr<Context<CUDA>> info,
     double* runtime, double* t_mm, double* t_qr);
 
-template void generate_old<float, float, magma_int_t>(
+template void generate_old<float, float, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, float* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     float* dmtx, magma_int_t ld_mtx, float* dr_factor, magma_int_t ld_r_factor,
-    state<float, float, magma_int_t>* precond_state, std::shared_ptr<Context> info, double* runtime, double* t_mm,
+    state<float, float, magma_int_t, CUDA>* precond_state, std::shared_ptr<Context<CUDA>> info, double* runtime, double* t_mm,
     double* t_qr);
 
-template void generate_old<double, double, magma_int_t>(
+template void generate_old<double, double, magma_int_t, CUDA>(
     magma_int_t num_rows_sketch, magma_int_t num_cols_sketch, double* dsketch,
     magma_int_t ld_sketch, magma_int_t num_rows_mtx, magma_int_t num_cols_mtx,
     double* dmtx, magma_int_t ld_mtx, double* dr_factor,
-    magma_int_t ld_r_factor, state<double, double, magma_int_t>* precond_state, std::shared_ptr<Context> info,
+    magma_int_t ld_r_factor, state<double, double, magma_int_t, CUDA>* precond_state, std::shared_ptr<Context<CUDA>> info,
     double* runtime, double* t_mm, double* t_qr);
 
 }  // namespace preconditioner

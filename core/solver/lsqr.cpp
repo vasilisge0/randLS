@@ -1,6 +1,6 @@
-#include <cuda_runtime.h>
-#include <cmath>
 #include <iostream>
+#include <cmath>
+#include <cuda_runtime.h>
 #include "cublas_v2.h"
 #include "cuda_fp16.h"
 #include "magma_lapack.h"
@@ -15,7 +15,6 @@
 #include "base_types.hpp"
 #include "lsqr.hpp"
 #include "solver.hpp"
-
 #include "../../utils/io.hpp"
 #include "../../cuda/solver/lsqr_kernels.cuh"
 
@@ -23,40 +22,6 @@
 namespace rls {
 namespace solver {
 namespace {
-
-
-void getmatrix(magma_int_t num_rows, magma_int_t num_cols,
-               double* source_vector, magma_int_t ld_source,
-               double* dest_vector, magma_int_t ld_dest, magma_queue_t queue)
-{
-    magma_dgetmatrix(num_rows, num_cols, source_vector, ld_source, dest_vector,
-                     ld_source, queue);
-}
-
-void getmatrix(magma_int_t num_rows, magma_int_t num_cols, float* source_vector,
-               magma_int_t ld_source, float* dest_vector, magma_int_t ld_dest,
-               magma_queue_t queue)
-{
-    magma_sgetmatrix(num_rows, num_cols, source_vector, ld_source, dest_vector,
-                     ld_source, queue);
-}
-
-void precond_apply(magma_trans_t trans, magma_int_t num_rows,
-                   double* precond_mtx, magma_int_t ld, double* u_vector,
-                   magma_int_t inc_u, magma_queue_t queue)
-{
-    cudaDeviceSynchronize();
-    blas::trsv(MagmaUpper, trans, MagmaNonUnit, num_rows, precond_mtx, ld,
-               u_vector, inc_u, queue);
-}
-
-void precond_apply(magma_trans_t trans, magma_int_t num_rows,
-                   float* precond_mtx, magma_int_t ld, float* u_vector,
-                   magma_int_t inc_u, magma_queue_t queue)
-{
-    blas::trsv(MagmaUpper, trans, MagmaNonUnit, num_rows, precond_mtx, ld,
-               u_vector, inc_u, queue);
-}
 
 
 template <typename value_type, typename index_type>
@@ -81,73 +46,6 @@ void initialize(index_type num_rows, index_type num_cols, index_type* iter,
     *phi_bar = *beta;
 }
 
-template <typename value_type, typename index_type>
-void initialize(index_type num_rows, index_type num_cols, index_type* iter,
-                value_type* alpha, value_type* beta, value_type* rho_bar,
-                value_type* phi_bar, value_type* mtx, value_type* u_vector,
-                value_type* v_vector, value_type* w_vector, value_type* rhs,
-                value_type* precond_mtx, index_type ld_precond,
-                magma_queue_t queue)
-{
-    index_type inc = 1;
-    *iter = 0;
-    *beta = blas::norm2(num_rows, rhs, inc, queue);
-    blas::copy(num_rows, rhs, inc, u_vector, inc, queue);
-    blas::scale(num_rows, 1 / *beta, u_vector, inc, queue);
-
-    blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows, u_vector,
-               inc, 0.0, v_vector, inc, queue);
-
-    precond_apply(MagmaTrans, num_cols, precond_mtx, ld_precond, v_vector, inc,
-                  queue);
-    *alpha = blas::norm2(num_cols, v_vector, inc, queue);
-    blas::scale(num_cols, 1 / *alpha, v_vector, inc, queue);
-    blas::copy(num_cols, v_vector, inc, w_vector, inc, queue);
-    *phi_bar = *beta;
-    *rho_bar = *alpha;
-}
-
-template <typename value_type_in, typename value_type, typename index_type>
-void initialize(index_type num_rows, index_type num_cols, value_type* mtx,
-                value_type* rhs, index_type* iter,
-                temp_scalars<value_type, index_type>* scalars,
-                temp_vectors<value_type_in, value_type, index_type>* vectors,
-                magma_queue_t queue)
-{
-    vectors->inc = 1;
-    memory::malloc(&vectors->u, num_rows);
-    memory::malloc(&vectors->v, num_rows);
-    memory::malloc(&vectors->w, num_rows);
-    memory::malloc(&vectors->temp, num_rows);
-    if (!std::is_same<value_type_in, value_type>::value) {
-        memory::malloc(&vectors->u_in, num_rows);
-        memory::malloc(&vectors->v_in, num_rows);
-        memory::malloc(&vectors->temp_in, num_rows);
-        memory::malloc(&vectors->mtx_in, num_rows * num_cols);
-
-        if (sizeof(value_type) > sizeof(value_type_in)) {
-            cuda::demote(num_rows, num_cols, mtx, num_rows, vectors->mtx_in,
-                         num_rows);
-        } else if (sizeof(value_type) < sizeof(value_type_in)) {
-            cuda::promote(num_rows, num_cols, mtx, num_rows, vectors->mtx_in,
-                          num_rows);
-        }
-    }
-
-    *iter = 0;
-    scalars->beta = blas::norm2(num_rows, rhs, vectors->inc, queue);
-    blas::copy(num_rows, rhs, vectors->inc, vectors->u, vectors->inc, queue);
-    blas::scale(num_rows, 1 / scalars->beta, vectors->u, vectors->inc, queue);
-    blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows, vectors->u,
-               vectors->inc, 1.0, vectors->v, vectors->inc, queue);
-
-    scalars->alpha = blas::norm2(num_cols, vectors->v, vectors->inc, queue);
-    blas::scale(num_cols, 1 / scalars->alpha, vectors->v, vectors->inc, queue);
-    blas::copy(num_cols, vectors->v, vectors->inc, vectors->w, vectors->inc,
-               queue);
-    scalars->rho_bar = scalars->alpha;
-    scalars->phi_bar = scalars->beta;
-}
 
 template <typename value_type_in, typename value_type, typename index_type>
 void initialize(dim2 size, value_type* mtx, value_type* rhs,
@@ -207,10 +105,10 @@ void initialize(dim2 size, value_type* mtx, value_type* rhs,
 
 
 // Step 1 of preconditioned LSQR.
-template <typename value_type_in, typename value_type, typename index_type>
-void step_1(matrix::dense<value_type>* mtx_in,
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+void step_1(matrix::Dense<value_type, device_type>* mtx_in,
             preconditioner::preconditioner<value_type_in, value_type,
-                                           index_type>* precond,
+                                           index_type, device_type>* precond,
             temp_scalars<value_type, index_type>* scalars,
             temp_vectors<value_type_in, value_type, index_type>* vectors,
             magma_queue_t queue)
@@ -263,11 +161,11 @@ void step_1(matrix::dense<value_type>* mtx_in,
     blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, queue);
 }
 
-template <typename value_type_in, typename value_type, typename index_type>
-void step_2(matrix::dense<value_type>* mtx_in,
-            matrix::dense<value_type>* sol_in,
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+void step_2(matrix::Dense<value_type, device_type>* mtx_in,
+            matrix::Dense<value_type, device_type>* sol_in,
             preconditioner::preconditioner<value_type_in, value_type,
-                                           index_type>* precond,
+                                           index_type, device_type>* precond,
             temp_scalars<value_type, index_type>* scalars,
             temp_vectors<value_type_in, value_type, index_type>* vectors,
             magma_queue_t queue)
@@ -296,10 +194,10 @@ void step_2(matrix::dense<value_type>* mtx_in,
     blas::axpy(num_cols, 1.0, vectors->v, 1, vectors->w, 1, queue);
 }
 
-template <typename value_type>
-bool check_stopping_criteria(matrix::dense<value_type>* mtx_in,
-                             matrix::dense<value_type>* rhs_in,
-                             matrix::dense<value_type>* sol_in,
+template <typename value_type, ContextType device_type>
+bool check_stopping_criteria(matrix::Dense<value_type, device_type>* mtx_in,
+                             matrix::Dense<value_type, device_type>* rhs_in,
+                             matrix::Dense<value_type, device_type>* sol_in,
                              value_type* res_vector, magma_int_t max_iter,
                              double tolerance, magma_int_t* iter,
                              double* resnorm, magma_queue_t queue)
@@ -327,11 +225,11 @@ bool check_stopping_criteria(matrix::dense<value_type>* mtx_in,
 }  // end of anonymous namespace
 
 
-template <typename value_type_in, typename value_type, typename index_type>
-void run_lsqr(matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
-              matrix::dense<value_type>* sol,
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
+void run_lsqr(matrix::Dense<value_type, device_type>* mtx, matrix::Dense<value_type, device_type>* rhs,
+              matrix::Dense<value_type, device_type>* sol,
               preconditioner::preconditioner<value_type_in, value_type,
-                                             index_type>* precond,
+                                             index_type, device_type>* precond,
               temp_scalars<value_type, index_type>* scalars,
               temp_vectors<value_type_in, value_type, index_type>* vectors,
               magma_int_t max_iter, double tolerance, magma_int_t* iter,
@@ -355,45 +253,45 @@ void run_lsqr(matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
     std::cout << "*iter: " << *iter << ", max_iter: " << max_iter << ", *resnorm: " << *resnorm << ", solver-runtime (sec): " << *t_solve << '\n';
 }
 
-template void run_lsqr<double, double, int>(
-    matrix::dense<double>* mtx, matrix::dense<double>* rhs,
-    matrix::dense<double>* sol,
-    preconditioner::preconditioner<double, double, int>* precond,
+template void run_lsqr(
+    matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
+    matrix::Dense<double, CUDA>* sol,
+    preconditioner::preconditioner<double, double, int, CUDA>* precond,
     temp_scalars<double, int>* scalars,
     temp_vectors<double, double, int>* vectors, magma_int_t max_iter,
     double tolerance, magma_int_t* iter, double* resnorm, magma_queue_t queue,
     double* t_solve);
 
-template void run_lsqr<float, double, int>(
-    matrix::dense<double>* mtx, matrix::dense<double>* rhs,
-    matrix::dense<double>* sol,
-    preconditioner::preconditioner<float, double, int>* precond,
+template void run_lsqr(
+    matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
+    matrix::Dense<double, CUDA>* sol,
+    preconditioner::preconditioner<float, double, int, CUDA>* precond,
     temp_scalars<double, int>* scalars,
     temp_vectors<float, double, int>* vectors, magma_int_t max_iter,
     double tolerance, magma_int_t* iter, double* resnorm, magma_queue_t queue,
     double* t_solve);
 
-template void run_lsqr<__half, double, int>(
-    matrix::dense<double>* mtx, matrix::dense<double>* rhs,
-    matrix::dense<double>* sol,
-    preconditioner::preconditioner<__half, double, int>* precond,
+template void run_lsqr(
+    matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
+    matrix::Dense<double, CUDA>* sol,
+    preconditioner::preconditioner<__half, double, int, CUDA>* precond,
     temp_scalars<double, int>* scalars,
     temp_vectors<__half, double, int>* vectors, magma_int_t max_iter,
     double tolerance, magma_int_t* iter, double* resnorm, magma_queue_t queue,
     double* t_solve);
 
-template void run_lsqr<float, float, int>(
-    matrix::dense<float>* mtx, matrix::dense<float>* rhs,
-    matrix::dense<float>* sol,
-    preconditioner::preconditioner<float, float, int>* precond,
+template void run_lsqr(
+    matrix::Dense<float, CUDA>* mtx, matrix::Dense<float, CUDA>* rhs,
+    matrix::Dense<float, CUDA>* sol,
+    preconditioner::preconditioner<float, float, int, CUDA>* precond,
     temp_scalars<float, int>* scalars, temp_vectors<float, float, int>* vectors,
     magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
     magma_queue_t queue, double* t_solve);
 
-template void run_lsqr<__half, float, int>(
-    matrix::dense<float>* mtx, matrix::dense<float>* rhs,
-    matrix::dense<float>* sol,
-    preconditioner::preconditioner<__half, float, int>* precond,
+template void run_lsqr(
+    matrix::Dense<float, CUDA>* mtx, matrix::Dense<float, CUDA>* rhs,
+    matrix::Dense<float, CUDA>* sol,
+    preconditioner::preconditioner<__half, float, int, CUDA>* precond,
     temp_scalars<float, int>* scalars,
     temp_vectors<__half, float, int>* vectors, magma_int_t max_iter,
     double tolerance, magma_int_t* iter, double* resnorm, magma_queue_t queue,

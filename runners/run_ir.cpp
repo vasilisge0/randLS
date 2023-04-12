@@ -80,25 +80,21 @@ int main(int argc, char* argv[]) {
     enum GlobalDataType data_type;
     enum GlobalDataType data_type_precond;
     enum GlobalDataType data_type_solver;
+    std::cout << "init\n";
 
     std::shared_ptr<rls::Context<rls::CUDA>> context = rls::Context<rls::CUDA>::create();
-
     std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> mtx = rls::matrix::Dense<double, rls::CUDA>::create(context, input_mtx);
     std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> rhs = rls::matrix::Dense<double, rls::CUDA>::create(context, input_rhs);
 
-    rls::io::print_mtx_gpu(2, 2, mtx->get_values(), 5, mtx->get_context()->get_queue());
-
-    auto con = mtx->get_context();
-    auto queue = con->get_queue();
-
-    // Decides the precision of the gaussian preconditioner depending on the inputs.
+//    // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
+    std::cout << "before precond\n";
     switch (precond_prec_type) {
         case 0:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::GeneralizedSplit<double, double, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<double, double, magma_int_t, rls::CUDA>::create(mtx);
             break;
         }
 
@@ -197,7 +193,11 @@ int main(int argc, char* argv[]) {
        return 0;
     }
 
-    solver->generate();
-    solver->run();
+    std::shared_ptr<rls::Context<rls::CUDA>> cp = rls::Context<rls::CUDA>::create();
+    auto z = rls::matrix::Dense<double, rls::CUDA>::create(cp, {1, 1});
+
+    auto ir = rls::solver::Ir<magma_int_t>::create(solver, 1);
+    ir->generate();
+    ir->run();
     return 0;
 }

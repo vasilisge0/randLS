@@ -7,6 +7,7 @@
 #include "cuda_fp16.h"
 #include "magma_lapack.h"
 #include "magma_v2.h"
+#include "base_types.hpp"
 
 
 namespace rls {
@@ -18,6 +19,9 @@ void read_mtx_size(char* filename, magma_int_t* m, magma_int_t* n);
 void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, double* mtx);
 
 void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, float* mtx);
+
+template <typename value_type, ContextType device_type=CPU>
+void read_mtx_values(std::shared_ptr<Context<device_type>> context, char* filename, dim2 size, value_type* values);
 
 void write_mtx(char* filename, magma_int_t m, magma_int_t n, double* mtx);
 

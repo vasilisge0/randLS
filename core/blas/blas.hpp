@@ -66,23 +66,45 @@ void trmv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
           magma_int_t n, magmaFloat_const_ptr dA, magma_int_t ldda,
           magmaFloat_ptr dx, magma_int_t incx, magma_queue_t queue);
 
+// template <ContextType device_type = CUDA>
+// void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
+        //   magma_int_t n, magma_int_t k, double alpha, magmaDouble_const_ptr dA,
+        //   magma_int_t ldda, magmaDouble_const_ptr dB, magma_int_t lddb,
+        //   double beta, magmaDouble_ptr dC, magma_int_t lddc,
+        //   Context<device_type>* context);
+// 
+// template <ContextType device_type = CUDA>
+// void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
+        //   magma_int_t n, magma_int_t k, float alpha, magmaFloat_const_ptr dA,
+        //   magma_int_t ldda, magmaFloat_const_ptr dB, magma_int_t lddb,
+        //   float beta, magmaFloat_ptr dC, magma_int_t lddc,
+        //   Context<device_type>* context);
+// 
+// template <ContextType device_type = CUDA>
+// void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
+        //   magma_int_t n, magma_int_t k, magmaHalf alpha, magmaHalf_const_ptr dA,
+        //   magma_int_t ldda, magmaHalf_const_ptr dB, magma_int_t lddb,
+        //   magmaHalf beta, magmaHalf_ptr dC, magma_int_t lddc,
+        //   Context<device_type>* context);
+
 void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, double alpha, magmaDouble_const_ptr dA,
           magma_int_t ldda, magmaDouble_const_ptr dB, magma_int_t lddb,
           double beta, magmaDouble_ptr dC, magma_int_t lddc,
-          Context* context);
+          Context<CUDA>* context);
 
 void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, float alpha, magmaFloat_const_ptr dA,
           magma_int_t ldda, magmaFloat_const_ptr dB, magma_int_t lddb,
           float beta, magmaFloat_ptr dC, magma_int_t lddc,
-          Context* context);
+          Context<CUDA>* context);
 
 void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
           magma_int_t n, magma_int_t k, magmaHalf alpha, magmaHalf_const_ptr dA,
           magma_int_t ldda, magmaHalf_const_ptr dB, magma_int_t lddb,
           magmaHalf beta, magmaHalf_ptr dC, magma_int_t lddc,
-          Context* context);
+          Context<CUDA>* context);
+
 
 magma_int_t geqrf2_gpu(magma_int_t m, magma_int_t n, magmaDouble_ptr dA,
                        magma_int_t ldda, double* tau, magma_int_t* info);

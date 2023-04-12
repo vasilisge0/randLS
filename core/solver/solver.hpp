@@ -22,14 +22,15 @@ enum SolverValueType {
 };
 
 enum SolverType {
-    Undefined_SolverType, 
+    Undefined_SolverType,
     LSQR,
     FGMRES
 };
 
+template <ContextType device_type=CUDA>
 class AbstractSolver {
 protected:
-    std::shared_ptr<Context> context_;
+    std::shared_ptr<Context<device_type>> context_;
     double tolerance_ = 1e-8;
     magma_int_t max_iter_ = 0;
     bool use_precond_ = false;
@@ -55,6 +56,7 @@ public:
     // virtual void run();
 // };
 
+template <ContextType device_type=CUDA>
 class generic_solver {
 public:
     virtual void generate() = 0;
@@ -65,8 +67,10 @@ public:
 
     magma_int_t get_max_iter() { return max_iter_; }
 
+    std::shared_ptr<Context<device_type>> get_context() { return context_; }
+
 protected:
-    std::shared_ptr<Context> context_;
+    std::shared_ptr<Context<device_type>> context_;
     double tolerance_ = 1e-8;
     magma_int_t max_iter_ = 0;
     bool use_precond_ = false;

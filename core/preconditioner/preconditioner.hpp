@@ -13,7 +13,7 @@ namespace rls {
 namespace preconditioner {
 
 
-template<typename value_type_in, typename value_type, typename index_type>
+template<typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 class gaussian;
 
 enum PrecondValueType {
@@ -34,9 +34,10 @@ enum PrecondType {
 };
 
 
+template<ContextType device_type=CUDA>
 class generic_preconditioner {
     protected:
-        std::shared_ptr<Context> context_;
+        std::shared_ptr<Context<device_type>> context_;
         PrecondValueType type_selection_ = Undefined_PrecondValueType;
         PrecondType type_;
 
@@ -51,8 +52,8 @@ class generic_preconditioner {
 };
 
 
-template <typename value_type_in, typename value_type, typename index_type>
-class preconditioner : public generic_preconditioner {
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
+class preconditioner : public generic_preconditioner<device_type> {
 public:
     preconditioner() {}
 
@@ -66,12 +67,12 @@ public:
 
     virtual dim2 get_size() { return precond_mtx_->get_size(); }
 
-    std::shared_ptr<matrix::dense<value_type>> get_mtx() { return precond_mtx_; }
+    std::shared_ptr<matrix::Dense<value_type, device_type>> get_mtx() { return precond_mtx_; }
 
 protected:
-    std::shared_ptr<matrix::dense<value_type>> precond_mtx_;
-    std::unique_ptr<matrix::dense<value_type_in>> precond_mtx_internal_;
-    std::shared_ptr<matrix::dense<value_type>> mtx_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> precond_mtx_;
+    std::unique_ptr<matrix::Dense<value_type_in, device_type>> precond_mtx_internal_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> mtx_;
     PrecondType precond_type_ = Undefined_PrecondType;
 };
 

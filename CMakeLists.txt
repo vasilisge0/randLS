@@ -111,3 +111,26 @@ set_target_properties(run_fgmres PROPERTIES
 target_link_libraries(run_fgmres
    -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand
 )
+
+# run_ir
+
+add_executable(run_ir runners/run_ir.cpp)
+add_dependencies(run_ir mmio)
+add_dependencies(run_ir mix_n_pick)
+# find_library(MAGMA_LIB libmagma.so)
+target_include_directories(run_ir PUBLIC
+    .
+    ../
+    include/
+    ${MAGMA_INC}
+    ${CUDA_INC}
+    ${RANDLS_INC}
+)
+set_target_properties(run_ir PROPERTIES 
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+    LINKER_LANGUAGE CUDA)
+target_link_libraries(run_ir
+   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand
+)

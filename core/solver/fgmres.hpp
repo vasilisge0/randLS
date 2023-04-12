@@ -21,9 +21,9 @@ namespace fgmres {
 
 
 // Vectors used by Fgmres method.
-template <typename value_type_in, typename value_type, typename index_type>
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 struct temp_vectors {
-    std::shared_ptr<Context> context_;
+    std::shared_ptr<Context<device_type>> context_;
     index_type max_iter_;
     value_type* u;
     value_type* v_basis;
@@ -39,23 +39,19 @@ struct temp_vectors {
     value_type* hessenberg_rhs_gpu;
     value_type* z_basis;
     index_type inc = 1;
-
     std::shared_ptr<std::vector<std::pair<value_type, value_type>>>
         givens_cache;
-    std::shared_ptr<matrix::dense<value_type>> tmp_cpu;
+    std::shared_ptr<matrix::Dense<value_type, CPU>> tmp_cpu;
     value_type* hessenberg_rhs;
 
-    temp_vectors(std::shared_ptr<Context> context, dim2 size, int max_iter, magma_queue_t& queue)
+    temp_vectors(std::shared_ptr<Context<device_type>> context, dim2 size, int max_iter, magma_queue_t& queue)
     {
+        std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create();
         context_ = context;
         max_iter_ = size[1];
-std::cout << "max_iter: " << max_iter_ << ", size[1]: " << size[1] << '\n';
         auto global_len = size[0] + size[1];
         memory::malloc(&u, global_len);
-std::cout << "allocating v_basis, global_len * (max_iter_ + 1): " << global_len * (max_iter_ + 1) << '\n';
         memory::malloc(&v_basis, global_len * (max_iter_ + 1));
-std::cout << "v: (after)" << '\n';
-io::print_mtx_gpu(2, 1, v_basis, 2, queue);
         memory::malloc(&z_basis, global_len * (max_iter_ + 1));
         memory::malloc(&w, global_len);
         memory::malloc(&temp, global_len);
@@ -73,8 +69,7 @@ io::print_mtx_gpu(2, 1, v_basis, 2, queue);
 
         givens_cache = std::shared_ptr<std::vector<std::pair<value_type, value_type>>>(new std::vector<std::pair<value_type, value_type>>);
         givens_cache->resize(static_cast<size_t>(max_iter_ + 1));
-        tmp_cpu = matrix::dense<value_type>::create(context, {max_iter_ + 1, 1});
-        tmp_cpu->generate_cpu();
+        tmp_cpu = matrix::Dense<value_type, CPU>::create(context_cpu, {max_iter_ + 1, 1});
     }
 
     ~temp_vectors()
@@ -142,149 +137,91 @@ void gemv(magma_trans_t trans, index_type num_rows, index_type num_cols,
 }  // namespace fgmres
 
 
-// Executes fgmres algorithm.
-//template <typename value_type_in, typename value_type, typename index_type>
-//void run_fgmres(
-//    matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
-//    matrix::dense<value_type>* sol,
-//    preconditioner::preconditioner<value_type_in, value_type, index_type>*
-//        precond,
-//    fgmres::temp_scalars<value_type, index_type>* scalars,
-//    fgmres::temp_vectors<value_type_in, value_type, index_type>* vectors,
-//    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
-//    magma_queue_t queue, double* t_solve);
-
-template <typename value_type_in, typename value_type, typename index_type>
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 void run_fgmres(
-    matrix::dense<value_type>* mtx, matrix::dense<value_type>* rhs,
-    matrix::dense<value_type>* sol,
-    preconditioner::preconditioner<value_type_in, value_type, index_type>*
+    matrix::Dense<value_type, device_type>* mtx, matrix::Dense<value_type, device_type>* rhs,
+    matrix::Dense<value_type, device_type>* sol,
+    preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>*
         precond,
     fgmres::temp_scalars<value_type, index_type>* scalars,
-    fgmres::temp_vectors<value_type_in, value_type, index_type>* vectors,
+    fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
     magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
     magma_queue_t queue, double* t_solve);
 
 
-
-template <typename value_type_in, typename value_type, typename index_type>
-class Fgmres : public generic_solver {
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+class Fgmres : public generic_solver<device_type> {
 public:
 
-    Fgmres(preconditioner::generic_preconditioner* precond_in,
-           double tolerance_in, std::shared_ptr<Context> context)
+    Fgmres(preconditioner::generic_preconditioner<device_type>* precond_in,
+           double tolerance_in, std::shared_ptr<Context<device_type>> context)
     {
-        context_ = context;
-        precond_ = precond_in;
-        tolerance_ = tolerance_in;
+        this->context_ = context;
+        this->precond_ = precond_in;
+        this->tolerance_ = tolerance_in;
         use_precond_ = true;
+        // generate();
     }
 
-    Fgmres(preconditioner::generic_preconditioner* precond_in,
+    Fgmres(preconditioner::generic_preconditioner<device_type>* precond_in,
            double tolerance_in, int max_iter_in,
-           std::shared_ptr<Context> context)
+           std::shared_ptr<Context<device_type>> context)
     {
-        context_ = context;
-        tolerance_ = tolerance_in;
-        max_iter_ = max_iter_in;
-        use_precond_ = true;
+        this->context_ = context;
+        this->tolerance_ = tolerance_in;
+        this->max_iter_ = max_iter_in;
+        this->use_precond_ = true;
+        // generate();
     }
 
-    Fgmres(preconditioner::generic_preconditioner* precond_in,
-           std::shared_ptr<matrix::dense<value_type>> mtx,
-           std::shared_ptr<matrix::dense<value_type>> rhs,
+    Fgmres(preconditioner::generic_preconditioner<device_type>* precond_in,
+           std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+           std::shared_ptr<matrix::Dense<value_type, device_type>> rhs,
            double tolerance_in) {
-
         precond_ = precond_in;
         this->mtx_ = mtx;
         this->rhs_ = rhs;
-        tolerance_ = tolerance_in;
-        context_ = mtx->get_context();
-        max_iter_ = mtx_->get_size()[1];
+        this->tolerance_ = tolerance_in;
+        this->context_ = mtx->get_context();
+        this->max_iter_ = mtx_->get_size()[1];
         use_precond_ = true;
         auto num_rows = this->mtx_->get_size()[0];
         auto num_cols = this->mtx_->get_size()[1];
     }
 
     // Create method (1) of Fgmres solver
-    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
-    create(preconditioner::generic_preconditioner* precond_in,
-           double tolerance_in, std::shared_ptr<Context> context)
+    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>
+    create(preconditioner::generic_preconditioner<device_type>* precond_in,
+           double tolerance_in, std::shared_ptr<Context<device_type>> context)
     {
-        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(
-            new Fgmres<value_type_in, value_type, index_type>(
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>(
+            new Fgmres<value_type_in, value_type, index_type, device_type>(
                 precond_in, tolerance_in, context));
     }
 
     // Create method (2) of Fgmres solver
-    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
-    create(preconditioner::generic_preconditioner* precond_in,
+    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>
+    create(preconditioner::generic_preconditioner<device_type>* precond_in,
            double tolerance_in, int max_iter_in,
-           std::shared_ptr<Context> context)
+           std::shared_ptr<Context<device_type>> context)
     {
-        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(
-            new Fgmres<value_type_in, value_type, index_type>(
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>(
+            new Fgmres<value_type_in, value_type, index_type, device_type>(
                 precond_in, tolerance_in, max_iter_in, context));
     }
 
 
     // Create method (3) of Fgmres solver.
-    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>
-        create(preconditioner::generic_preconditioner* precond_in,
-        std::shared_ptr<matrix::dense<value_type>> mtx,
-        std::shared_ptr<matrix::dense<value_type>> rhs,
+    static std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>
+        create(preconditioner::generic_preconditioner<device_type>* precond_in,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> rhs,
         double tolerance_in)
     {
-        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type>>(new Fgmres<value_type_in, value_type, index_type>(precond_in, mtx, rhs, tolerance_in));
+        return std::unique_ptr<Fgmres<value_type_in, value_type, index_type, device_type>>(new Fgmres<value_type_in, value_type,
+            index_type, device_type>(precond_in, mtx, rhs, tolerance_in));
     }
 
-    // Allocates matrices used in fgmres and constructs preconditioner.
-    void generate()
-    {
-        auto queue = context_->get_queue();
-        sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(
-            new rls::matrix::dense<value_type>());
-        glb_sol_ = std::shared_ptr<rls::matrix::dense<value_type>>(
-            new rls::matrix::dense<value_type>());
-        glb_rhs_ = std::shared_ptr<rls::matrix::dense<value_type>>(
-            new rls::matrix::dense<value_type>());
-        auto tmp_rhs = std::shared_ptr<rls::matrix::dense<value_type>>(
-            new rls::matrix::dense<value_type>());
-
-        // generates rhs and solution vectors
-        auto num_rows = this->mtx_->get_size()[0];
-        auto num_cols = this->mtx_->get_size()[1];
-        auto global_len = num_rows + num_cols;
-        sol_->generate({global_len, 1});
-        sol_->zeros();
-        glb_sol_->generate({global_len, 1});
-        glb_rhs_->generate({global_len, 1});
-        glb_rhs_->zeros();
-
-        auto norm_rhs =
-        blas::norm2(num_rows, rhs_->get_values(), 1, queue);
-        blas::copy(num_rows, rhs_->get_values(), 1, glb_rhs_->get_values(),
-                   1, queue);
-
-        blas::copy(num_cols, sol_->get_values(), 1,
-            &glb_rhs_->get_values()[num_rows], 1, queue);
-        auto norm_rhs2 = blas::norm2(global_len, glb_rhs_->get_values(), 1,
-            queue);
-
-        max_iter_ = num_cols;
-
-        vectors_ = std::shared_ptr<
-            fgmres::temp_vectors<value_type_in, value_type, index_type>>(
-            new fgmres::temp_vectors<value_type_in, value_type, index_type>(
-                context_, mtx_->get_size(), max_iter_, queue));
-
-        dim2 h_size = {max_iter_ + 1, 1};
-        if (use_precond_) {
-            precond_->generate();
-            precond_->compute();
-        }
-
-    }
 
     void run()
     {
@@ -292,31 +229,72 @@ public:
         if (use_precond_) {
             run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
                 static_cast<preconditioner::preconditioner<value_type_in,
-                value_type, index_type>*>(precond_), &scalars_, vectors_.get(),
+                    value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
                 this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
-                context_->get_queue(), &t_solve_);
+                this->context_->get_queue(), &t_solve_);
         } else {
             // Run non-preconditioned FGMRES.
         }
     }
 
+    // Allocates matrices used in fgmres and constructs preconditioner.
+    void generate()
+    {
+        auto queue = this->context_->get_queue();
+
+        // generates rhs and solution vectors
+        auto num_rows = this->mtx_->get_size()[0];
+        auto num_cols = this->mtx_->get_size()[1];
+        auto global_len = num_rows + num_cols;
+        sol_ = matrix::Dense<value_type, device_type>::create(this->context_, {num_cols, 1});
+        sol_->zeros();
+        glb_sol_ = matrix::Dense<value_type, device_type>::create(this->context_, {global_len, 1});
+        glb_sol_->zeros();
+        glb_rhs_ = matrix::Dense<value_type, device_type>::create(this->context_, {global_len, 1});
+        glb_rhs_->zeros();
+
+        auto norm_rhs =
+        blas::norm2(num_rows, rhs_->get_values(), 1, queue);
+        blas::copy(num_rows, rhs_->get_values(), 1, glb_rhs_->get_values(),
+                   1, queue);
+        blas::copy(num_cols, sol_->get_values(), 1,
+            &glb_rhs_->get_values()[num_rows], 1, queue);
+        auto norm_rhs2 = blas::norm2(global_len, glb_rhs_->get_values(), 1,
+            queue);
+        this->max_iter_ = num_cols;
+
+        vectors_ = std::shared_ptr<
+            fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>>(
+            new fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>(
+                this->context_, mtx_->get_size(), this->max_iter_, queue));
+
+        dim2 h_size = {this->max_iter_ + 1, 1};
+        if (use_precond_) {
+            precond_->generate();
+            precond_->compute();
+        }
+    }
+
 private:
+
     void allocate_vectors(dim2 size);
+
     void free_vectors();
+
     bool use_precond_ = false;
     magma_int_t iter_;
     double resnorm_;
     double t_solve_;
-    std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type>>
+    std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>>
         vectors_;
     fgmres::temp_scalars<value_type, index_type> scalars_;
-    preconditioner::generic_preconditioner* precond_;
-    std::shared_ptr<matrix::dense<value_type>> mtx_;
-    std::shared_ptr<matrix::dense<value_type>> dmtx_;
-    std::shared_ptr<matrix::dense<value_type>> rhs_;
-    std::shared_ptr<matrix::dense<value_type>> sol_;
-    std::shared_ptr<matrix::dense<value_type>> glb_rhs_;
-    std::shared_ptr<matrix::dense<value_type>> glb_sol_;
+    preconditioner::generic_preconditioner<device_type>* precond_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> mtx_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> dmtx_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> rhs_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> sol_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> glb_rhs_;
+    std::shared_ptr<matrix::Dense<value_type, device_type>> glb_sol_;
 };
 
 

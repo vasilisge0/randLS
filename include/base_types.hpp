@@ -17,7 +17,7 @@ public:
     int& operator[](int position) {
         return values[position];
     }
-    
+
 private:
     int values[2] = {0, 0};
 };
