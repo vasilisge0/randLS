@@ -70,7 +70,6 @@ void read_mtx_values<float, CPU>(std::shared_ptr<Context<CPU>> context, char* fi
 
 template <>
 void read_mtx_values<double, CUDA>(std::shared_ptr<Context<CUDA>> context, char* filename_mtx, dim2 size, double* values) {
-    std::cout << "in read mtx values\n";
     std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create(CPU);
     auto tmp = matrix::Dense<double, CPU>::create(context_cpu, size);
     auto queue = context->get_queue();
@@ -132,13 +131,13 @@ void write_mtx(char* filename, magma_int_t m, magma_int_t n, float* mtx) {
     mm_write_mtx_array_size(file_handle, m, n);
     for (int j = 0; j < n; ++j) {
         for (int i = 0; i < m; ++i) {
-            fprintf(file_handle, "%lf\n", mtx[i + j * m]);
+            // fprintf(file_handle, "%lf\n", mtx[i + j * m]);
+            fprintf(file_handle, "%1.16e\n", mtx[i + j * m]);
         }
     }
 }
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx) {
-    std::cout << "m: " << m << ", n: " << n << '\n';
     for (auto i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             printf("%lf ", mtx[i + j * m]);
@@ -148,9 +147,12 @@ void print_mtx(magma_int_t m, magma_int_t n, double* mtx) {
 }
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx, magma_int_t ld) {
+    printf("here\n");
+    std::cout << "m: " << m << ", n: " << n << '\n';
     for (auto i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             printf("%lf ", mtx[i + j * ld]);
+            // printf("%1.16e ", mtx[i + j * m]);
         }
         printf("\n");
     }
@@ -174,7 +176,7 @@ void write_mtx(char* filename, magma_int_t num_rows, magma_int_t num_cols, doubl
     printf("num_rows: %d, num_cols: %d\n", num_rows, num_cols);
     printf("ld: %d\n", ld);
     magma_dgetmatrix(num_rows, num_cols, dmtx, ld,
-              t, num_rows, queue);
+                     t, num_rows, queue);
     write_mtx(filename, num_rows, num_cols, t);
     magma_free_cpu(t);
 }

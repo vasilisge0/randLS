@@ -8,6 +8,7 @@
 #include "magma_v2.h"
 #include "stdio.h"
 
+#include "base_types.hpp"
 
 #include "../../core/blas/blas.hpp"
 
@@ -145,6 +146,63 @@ template void set_values(magma_int_t num_elems, float val, float* values);
 
 template void set_values(magma_int_t num_elems, __half val, __half* values);
 
+template <typename value_type, typename index_type>
+__global__ void set_eye_2d_kernel(index_type num_rows, index_type num_cols, value_type* values, index_type ld)
+{
+    auto col = blockIdx.x * blockDim.x + threadIdx.x;
+    auto row = blockIdx.y * blockDim.y + threadIdx.y;
+    if ((row < num_rows) && (col < num_cols)) {
+        if (row == col) {
+            values[row + ld*col] = 1.0;
+        }
+        else {
+            values[row + ld*col] = 0.0;
+        }
+    }
+}
+
+template <typename value_type, typename index_type>
+void set_eye(dim2 size, value_type* values, index_type ld)
+{
+    ::dim3 grid_size(size[0]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1, size[1]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1);
+    ::dim3 block_size(CUDA_MAX_NUM_THREADS_PER_BLOCK_2D, CUDA_MAX_NUM_THREADS_PER_BLOCK_2D);
+    set_eye_2d_kernel<<<grid_size, block_size>>>(size[0], size[1], values, ld);
+    cudaDeviceSynchronize();
+}
+
+template void set_eye(dim2 size, double* values, magma_int_t ld);
+
+template void set_eye(dim2 size, float* values, magma_int_t ld);
+                               
+template void set_eye(dim2 size, __half* values, magma_int_t ld);
+
+
+
+template <typename value_type, typename index_type>
+__global__ void set_upper_triang_2d_kernel(index_type num_rows, index_type num_cols,
+    value_type* values, index_type ld)
+{
+    auto col = blockIdx.x * blockDim.x + threadIdx.x;
+    auto row = blockIdx.y * blockDim.y + threadIdx.y;
+    if ((row < num_rows) && (col < num_cols) && (row > col)) {
+        values[row + ld*col] = 0.0;
+    }
+}
+
+template <typename value_type, typename index_type>
+void set_upper_triang(dim2 size, value_type* values, index_type ld)
+{
+    ::dim3 grid_size(size[0]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1, size[1]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1);
+    ::dim3 block_size(CUDA_MAX_NUM_THREADS_PER_BLOCK_2D, CUDA_MAX_NUM_THREADS_PER_BLOCK_2D);
+    set_upper_triang_2d_kernel<<<grid_size, block_size>>>(size[0], size[1], values, ld);
+    cudaDeviceSynchronize();
+}
+
+template void set_upper_triang(dim2 size, double* values, magma_int_t ld);
+
+template void set_upper_triang(dim2 size, float* values, magma_int_t ld);
+
+template void set_upper_triang(dim2 size, __half* values, magma_int_t ld);
 
 }  // namespace cuda
 }  // namespace rls

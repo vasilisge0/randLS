@@ -1,6 +1,6 @@
-#include <iostream>
-#include <cmath>
 #include <cuda_runtime.h>
+#include <cmath>
+#include <iostream>
 #include "cublas_v2.h"
 #include "cuda_fp16.h"
 #include "magma_lapack.h"
@@ -8,6 +8,8 @@
 
 
 #include "../../cuda/preconditioner/preconditioner_kernels.cuh"
+#include "../../cuda/solver/lsqr_kernels.cuh"
+#include "../../utils/io.hpp"
 #include "../blas/blas.hpp"
 #include "../dense/dense.hpp"
 #include "../memory/memory.hpp"
@@ -15,8 +17,6 @@
 #include "base_types.hpp"
 #include "lsqr.hpp"
 #include "solver.hpp"
-#include "../../utils/io.hpp"
-#include "../../cuda/solver/lsqr_kernels.cuh"
 
 
 namespace rls {
@@ -24,28 +24,26 @@ namespace solver {
 namespace {
 
 
-template <typename value_type, typename index_type>
-void initialize(index_type num_rows, index_type num_cols, index_type* iter,
-                value_type* alpha, value_type* beta, value_type* rho_bar,
-                value_type* phi_bar, value_type* mtx, value_type* u_vector,
-                value_type* v_vector, value_type* w_vector, value_type* rhs,
+template <typename value_type_in, typename value_type, typename index_type>
+void initialize(dim2 size, index_type* iter, value_type* mtx, value_type* rhs,
+                temp_scalars<value_type, index_type>* scalars,
+                temp_vectors<value_type_in, value_type, index_type>* vectors,
                 magma_queue_t queue)
 {
-    index_type inc = 1;
     *iter = 0;
-    *beta = blas::norm2(num_rows, rhs, inc, queue);
-    blas::copy(num_rows, rhs, inc, u_vector, inc, queue);
-    blas::scale(num_rows, 1 / *beta, u_vector, inc, queue);
-    blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows, u_vector,
-               inc, 1.0, v_vector, inc, queue);
+    index_type inc = 1;
+    scalars->beta = blas::norm2(size[0], rhs, inc, queue);
+    blas::copy(size[0], rhs, inc, vectors->u, inc, queue);
+    blas::scale(size[0], 1 / scalars->beta, vectors->u, inc, queue);
+    blas::gemv(MagmaTrans, size[0], size[1], 1.0, mtx, size[0], vectors->u,
+               inc, 1.0, vectors->v, inc, queue);
 
-    *alpha = blas::norm2(num_rows, v_vector, inc, queue);
-    blas::scale(num_rows, 1 / *alpha, v_vector, inc, queue);
-    blas::copy(num_rows, v_vector, inc, w_vector, inc, queue);
-    *rho_bar = *alpha;
-    *phi_bar = *beta;
+    scalars->alpha = blas::norm2(size[0], vectors->v, inc, queue);
+    blas::scale(size[0], 1 / scalars->alpha, vectors->v, inc, queue);
+    blas::copy(size[0], vectors->v, inc, vectors->w, inc, queue);
+    scalars->rho_bar = scalars->alpha;
+    scalars->phi_bar = scalars->beta;
 }
-
 
 template <typename value_type_in, typename value_type, typename index_type>
 void initialize(dim2 size, value_type* mtx, value_type* rhs,
@@ -73,39 +71,37 @@ void initialize(dim2 size, value_type* mtx, value_type* rhs,
     // double t = magma_sync_wtime(queue);
     scalars->beta = blas::norm2(num_rows, rhs, vectors->inc, queue);
     blas::copy(num_rows, rhs, vectors->inc, vectors->u, vectors->inc, queue);
-    blas::scale(num_rows, 1 / scalars->beta, vectors->u, vectors->inc,
-        queue);
+    blas::scale(num_rows, 1 / scalars->beta, vectors->u, vectors->inc, queue);
 
     if (!std::is_same<value_type_in, value_type>::value) {
-        cuda::demote(num_rows, 1, vectors->u, num_rows,
-                     vectors->u_in, num_rows);
+        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in,
+                     num_rows);
         cuda::demote(num_rows, 1, vectors->v, num_rows, vectors->v_in,
                      num_rows);
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
-            num_rows, vectors->u_in, vectors->inc, 0.0, vectors->v_in,
-            vectors->inc, queue);
-        cuda::promote(num_rows, 1, vectors->v_in,
-            num_rows, vectors->v, num_rows);
-    }
-    else {
-        blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows, vectors->u,
-               vectors->inc, 0.0, vectors->v, vectors->inc, queue);
+                   num_rows, vectors->u_in, vectors->inc, 0.0, vectors->v_in,
+                   vectors->inc, queue);
+        cuda::promote(num_rows, 1, vectors->v_in, num_rows, vectors->v,
+                      num_rows);
+    } else {
+        blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, mtx, num_rows,
+                   vectors->u, vectors->inc, 0.0, vectors->v, vectors->inc,
+                   queue);
     }
     precond->apply(MagmaTrans, vectors->v, vectors->inc);
 
     scalars->alpha = blas::norm2(num_cols, vectors->v, vectors->inc, queue);
-    blas::scale(num_cols, 1 / scalars->alpha, vectors->v, vectors->inc,
-        queue);
-    blas::copy(num_cols, vectors->v, vectors->inc, vectors->w,
-        vectors->inc, queue);
+    blas::scale(num_cols, 1 / scalars->alpha, vectors->v, vectors->inc, queue);
+    blas::copy(num_cols, vectors->v, vectors->inc, vectors->w, vectors->inc,
+               queue);
     scalars->phi_bar = scalars->beta;
     scalars->rho_bar = scalars->alpha;
     // *t_solve += (magma_sync_wtime(queue) - t);
 }
 
-
 // Step 1 of preconditioned LSQR.
-template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+template <typename value_type_in, typename value_type, typename index_type,
+          ContextType device_type>
 void step_1(matrix::Dense<value_type, device_type>* mtx_in,
             preconditioner::preconditioner<value_type_in, value_type,
                                            index_type, device_type>* precond,
@@ -127,11 +123,13 @@ void step_1(matrix::Dense<value_type, device_type>* mtx_in,
     if (!std::is_same<value_type_in, value_type>::value) {
         cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
                      num_rows);
-        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in, num_rows);
+        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in,
+                     num_rows);
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
                    num_rows, vectors->temp_in, inc, -1.0, vectors->u_in, inc,
                    queue);
-        cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u, num_rows);
+        cuda::promote(num_rows, 1, vectors->u_in, num_rows, vectors->u,
+                      num_rows);
     } else {
         blas::gemv(MagmaNoTrans, num_rows, num_cols, 1.0, mtx, num_rows,
                    vectors->temp, inc, -1.0, vectors->u, inc, queue);
@@ -141,7 +139,8 @@ void step_1(matrix::Dense<value_type, device_type>* mtx_in,
 
     // Compute new v vector.
     if (!std::is_same<value_type_in, value_type>::value) {
-        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in, num_rows);
+        cuda::demote(num_rows, 1, vectors->u, num_rows, vectors->u_in,
+                     num_rows);
         cuda::demote(num_rows, 1, vectors->temp, num_rows, vectors->temp_in,
                      num_rows);
         blas::gemv(MagmaTrans, num_rows, num_cols, 1.0, vectors->mtx_in,
@@ -155,13 +154,15 @@ void step_1(matrix::Dense<value_type, device_type>* mtx_in,
     }
 
     precond->apply(MagmaTrans, vectors->temp, inc);
-    blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1, queue);
+    blas::axpy(num_cols, -(scalars->beta), vectors->v, 1, vectors->temp, 1,
+               queue);
     scalars->alpha = blas::norm2(num_cols, vectors->temp, inc, queue);
     blas::scale(num_cols, 1 / scalars->alpha, vectors->temp, inc, queue);
     blas::copy(num_cols, vectors->temp, inc, vectors->v, inc, queue);
 }
 
-template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+template <typename value_type_in, typename value_type, typename index_type,
+          ContextType device_type>
 void step_2(matrix::Dense<value_type, device_type>* mtx_in,
             matrix::Dense<value_type, device_type>* sol_in,
             preconditioner::preconditioner<value_type_in, value_type,
@@ -177,8 +178,8 @@ void step_2(matrix::Dense<value_type, device_type>* mtx_in,
     auto precond_mtx = precond->get_values();
     index_type ld_precond = precond->get_size()[0];
     index_type inc = 1;
-    auto rho = std::sqrt(
-        ((scalars->rho_bar) * (scalars->rho_bar) + scalars->beta * scalars->beta));
+    auto rho = std::sqrt(((scalars->rho_bar) * (scalars->rho_bar) +
+                          scalars->beta * scalars->beta));
     auto c = (scalars->rho_bar) / rho;
     auto s = scalars->beta / rho;
     auto theta = s * scalars->alpha;
@@ -222,11 +223,14 @@ bool check_stopping_criteria(matrix::Dense<value_type, device_type>* mtx_in,
     }
 }
 
+
 }  // end of anonymous namespace
 
 
-template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
-void run_lsqr(matrix::Dense<value_type, device_type>* mtx, matrix::Dense<value_type, device_type>* rhs,
+template <typename value_type_in, typename value_type, typename index_type,
+          ContextType device_type = CUDA>
+void run_lsqr(matrix::Dense<value_type, device_type>* mtx,
+              matrix::Dense<value_type, device_type>* rhs,
               matrix::Dense<value_type, device_type>* sol,
               preconditioner::preconditioner<value_type_in, value_type,
                                              index_type, device_type>* precond,
@@ -244,13 +248,15 @@ void run_lsqr(matrix::Dense<value_type, device_type>* mtx, matrix::Dense<value_t
     while (1) {
         step_1(mtx, precond, scalars, vectors, queue);
         step_2(mtx, sol, precond, scalars, vectors, queue);
-        if (check_stopping_criteria(mtx, rhs, sol, vectors->temp,
-            max_iter, tolerance, iter, resnorm, queue)) {
+        if (check_stopping_criteria(mtx, rhs, sol, vectors->temp, max_iter,
+                                    tolerance, iter, resnorm, queue)) {
             break;
         }
     }
     *t_solve += (magma_sync_wtime(queue) - t);
-    std::cout << "*iter: " << *iter << ", max_iter: " << max_iter << ", *resnorm: " << *resnorm << ", solver-runtime (sec): " << *t_solve << '\n';
+    std::cout << "*iter: " << *iter << ", max_iter: " << max_iter
+              << ", *resnorm: " << *resnorm
+              << ", solver-runtime (sec): " << *t_solve << '\n';
 }
 
 template void run_lsqr(

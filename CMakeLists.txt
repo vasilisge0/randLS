@@ -4,6 +4,7 @@ enable_language(CUDA)
 set(CMAKE_CXX_FLAGS "-Wall -std=c++14")
 
 add_library(mix_n_pick SHARED
+            utils/convert.cpp
             core/solver/lsqr.cpp
             core/solver/fgmres.cpp
             core/solver/solver.cpp

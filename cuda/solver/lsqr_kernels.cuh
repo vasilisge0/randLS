@@ -2,6 +2,7 @@
 #define CUDA_KERNELS
 
 #include "../../core/memory/magma_context.hpp"
+#include "base_types.hpp"
 
 
 namespace rls {
@@ -86,6 +87,12 @@ void solution_initialization(index_type num_rows, value_type* init_sol,
 
 template <typename value_type, typename index_type>
 void set_values(index_type num_elems, value_type val, value_type* values);
+
+template <typename value_type, typename index_type>
+void set_eye(dim2 size, value_type* values, index_type ld);
+
+template <typename value_type, typename index_type>
+void set_upper_triang(dim2 size, value_type* values, index_type ld);
 
 
 }  // namespace cuda

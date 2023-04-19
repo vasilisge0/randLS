@@ -58,6 +58,18 @@ void trsv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
           magma_int_t n, magmaFloat_const_ptr dA, magma_int_t ldda,
           magmaFloat_ptr dx, magma_int_t incx, magma_queue_t queue);
 
+void trsm(magma_side_t side, magma_uplo_t uplo, magma_trans_t trans,
+          magma_diag_t diag, magma_int_t m, magma_int_t n,
+          double alpha, magmaDouble_const_ptr dA,
+          magma_int_t ldda, magmaDouble_ptr dB,
+          magma_int_t lddb, magma_queue_t queue);
+
+void trsm(magma_side_t side, magma_uplo_t uplo, magma_trans_t trans,
+          magma_diag_t diag, magma_int_t m, magma_int_t n,
+          float alpha, magmaFloat_const_ptr dA,
+          magma_int_t ldda, magmaFloat_ptr dB,
+          magma_int_t lddb, magma_queue_t queue);
+
 void trmv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
           magma_int_t n, magmaDouble_const_ptr dA, magma_int_t ldda,
           magmaDouble_ptr dx, magma_int_t incx, magma_queue_t queue);
@@ -120,6 +132,12 @@ float dot(magma_int_t n, magmaFloat_const_ptr dx, magma_int_t incx,
 
 float dot(magma_int_t n, const __half* dx, magma_int_t incx,
     const __half* dy, magma_int_t incy, magma_queue_t queue);
+
+magma_int_t trtri(magma_uplo_t uplo, magma_diag_t diag, magma_int_t n,
+                  magmaDouble_ptr dA, magma_int_t ldda, magma_int_t* info);
+
+magma_int_t trtri(magma_uplo_t uplo, magma_diag_t diag, magma_int_t n,
+                  magmaFloat_ptr dA, magma_int_t ldda, magma_int_t* info);
 
 }  // namespace blas
 }  // namespace rls

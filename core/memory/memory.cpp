@@ -48,12 +48,40 @@ void zeros<float, CUDA>(dim2 size, float* values) {
     cuda::set_values(num_elems, zero, values);
 }
 
-//template <>
-//void zeros<__half, CUDA>(dim2 size, __half* values) {
-//    auto num_elems = size[0] * size[1];
-//    __half zero = 0.0;
-//    cuda::set_values(num_elems, zero, values);
-//}
+template <typename value_type, ContextType device=CPU>
+void eye(dim2 size, value_type* values);
+
+template <>
+void eye<double, CPU>(dim2 size, double* values) {
+    auto num_elems = size[0] * size[1];
+    for (auto i = 0; i < num_elems; i++) {
+        values[i] = 0.0;
+    }
+}
+
+template <>
+void eye<float, CPU>(dim2 size, float* values) {
+    auto num_elems = size[0] * size[1];
+    for (auto i = 0; i < num_elems; i++) {
+        values[i] = 0.0;
+    }
+}
+
+
+template <>
+void eye<double, CUDA>(dim2 size, double* values) {
+    cuda::set_eye(size, values, size[0]);
+}
+
+template <>
+void eye<float, CUDA>(dim2 size, float* values) {
+    cuda::set_eye(size, values, size[0]);
+}
+
+template <>
+void zeros<__half, CUDA>(dim2 size, __half* values) {
+    cuda::set_eye(size, values, size[0]);
+}
 
 void malloc(magmaDouble_ptr* ptr, size_t n)
 {

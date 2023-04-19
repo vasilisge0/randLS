@@ -61,8 +61,6 @@ public:
 
     virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u) = 0;
 
-    virtual void apply(magma_trans_t trans, value_type* u_vector, index_type inc_u, magma_queue_t queue) = 0;
-
     virtual value_type* get_values() { return precond_mtx_->get_values(); }
 
     virtual dim2 get_size() { return precond_mtx_->get_size(); }

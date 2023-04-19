@@ -9,6 +9,7 @@
 
 #include "../../cuda/solver/lsqr_kernels.cuh"
 #include "../../cuda/preconditioner/preconditioner_kernels.cuh"
+#include "../../utils/convert.hpp"
 #include "../../utils/io.hpp"
 #include "../blas/blas.hpp"
 #include "../dense/dense.hpp"
@@ -77,13 +78,13 @@ void initialize(
                  vectors->inc, 1.0, vectors->residual, vectors->inc,
                  vectors->temp, queue);
 
-
     // Left apply.
     precond->apply(MagmaTrans, vectors->residual, vectors->inc);
-
+    std::cout<<"res: <<< \n";
+    io::print_mtx_gpu(5, 1, vectors->residual,
+        global_length, queue);
     scalars->beta =
         blas::norm2(global_length, vectors->residual, vectors->inc, queue);
-
     vectors->tmp_cpu->get_values()[0] = scalars->beta;
     auto max_iter = vectors->max_iter_;
     for (auto i = 0; i < max_iter + 1; i++) {
@@ -111,11 +112,38 @@ void step_1(dim2 size, matrix::Dense<value_type, device_type>* mtx,
     auto v = vectors->v_basis + global_len * cur_iter;
     auto w = vectors->v_basis + global_len * (cur_iter + 1);
 
-    blas::copy(global_len, v, 1, z, 1, queue);
-    precond->apply(MagmaNoTrans, z, 1);
+    // if (cur_iter == 1) {
+        // std::cout << "cur_iter: (before)" << cur_iter << "\n";
+        // io::print_mtx_gpu(5, 1, z, global_len, queue);
+    // }
 
-    fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx->get_values(),
-                 size[0], z, 1, 0.0, w, 1, vectors->temp, queue);
+    blas::copy(global_len, v, 1, z, 1, queue);
+    if (cur_iter == 1) {
+        std::cout << "z: (before)" << '\n';
+        io::print_mtx_gpu(5, 1, &z[global_len-10], global_len, queue);
+    }
+    precond->apply(MagmaNoTrans, z, 1);
+    if (cur_iter == 1) {
+        std::cout << "z: " << '\n';
+        io::print_mtx_gpu(5, 1, &z[global_len-10], global_len, queue);
+       // io::write_mtx("test2.mtx", global_len, 1, z, global_len, queue);
+    }
+
+    if (typeid(value_type_in) != typeid(value_type)) {
+        value_type_in* z_in = nullptr;
+        value_type_in* w_in = nullptr;
+        value_type_in* temp_in = nullptr;
+        value_type_in* mtx_in = nullptr;
+        // rls::utils::convert(global_len, 1, z, global_len, z_in, global_len);
+        // rls::utils::convert(global_len, 1, w, global_len, w_in, global_len);
+        fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx_in,
+                     size[0], z_in, 1, 0.0, w_in, 1, temp_in, queue);
+        // rls::utils::convert(global_len, 1, w_in, global_len, w, global_len);
+    }
+    else {
+        fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx->get_values(),
+                     size[0], z, 1, 0.0, w, 1, vectors->temp, queue);
+    }
     precond->apply(MagmaTrans, w, 1);
 }
 
@@ -154,22 +182,25 @@ void step_2(dim2 size, matrix::Dense<value_type, device_type>* mtx,
               cur_iter, max_iter, *vectors->givens_cache.get());
     magma_queue_sync(queue);
 
-
     auto hessenberg_mtx_gpu = vectors->hessenberg_mtx_gpu;
     auto hessenberg_rhs_gpu = vectors->hessenberg_rhs_gpu;
     memory::setmatrix(max_iter + 1, max_iter, hessenberg_mtx, max_iter + 1,
               hessenberg_mtx_gpu, max_iter + 1, queue);
     memory::setmatrix(max_iter + 1, 1, vectors->hessenberg_rhs, max_iter + 1,
               hessenberg_rhs_gpu, max_iter + 1, queue);
-
     blas::trsv(MagmaUpper, MagmaNoTrans, MagmaNonUnit,
                cur_iter + 1, hessenberg_mtx_gpu, (max_iter + 1),
                hessenberg_rhs_gpu, 1, queue);
-
     magma_queue_sync(queue);
-    blas::gemv(MagmaNoTrans, global_len, cur_iter + 1, 1.0, vectors->z_basis,
-               global_len, hessenberg_rhs_gpu, 1,
-               0.0, sol->get_values(), 1, queue);
+
+    if (typeid(value_type_in) != typeid(value_type)) {
+        
+    }
+    else {
+        blas::gemv(MagmaNoTrans, global_len, cur_iter + 1, 1.0, vectors->z_basis,
+                   global_len, hessenberg_rhs_gpu, 1,
+                   0.0, sol->get_values(), 1, queue);
+    }
 }
 
 template <typename value_type, typename index_type, ContextType device_type>
@@ -203,6 +234,7 @@ bool check_stopping_criteria(matrix::Dense<value_type, device_type>* mtx_in,
 
 
 }  // namespace fgmres
+
 
 template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
 void run_fgmres(

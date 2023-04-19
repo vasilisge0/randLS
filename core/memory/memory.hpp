@@ -13,6 +13,9 @@ namespace memory {
 template <typename value_type, ContextType device=CPU>
 void zeros(dim2 size, value_type* values);
 
+template <typename value_type, ContextType device=CUDA>
+void eye(dim2 size, value_type* values);
+
 void malloc(magmaDouble_ptr* ptr, size_t n);
 
 void malloc(magmaFloat_ptr* ptr, size_t n);

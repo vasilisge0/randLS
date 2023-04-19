@@ -45,7 +45,7 @@ struct state{
 };
 
 template <typename value_type_internal, typename value_type, typename index_type, ContextType device_type=CUDA>
-void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
+void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
               value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx,
               value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
@@ -57,7 +57,7 @@ void generate_old(index_type num_rows_sketch, index_type num_cols_sketch,
 
 template <typename value_type_internal, typename value_type,
           typename index_type, ContextType device_type=CUDA>
-void generate_old(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
+void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch, value_type* dsketch, index_type ld_sketch,
               index_type num_rows_mtx, index_type num_cols_mtx, value_type* dmtx, index_type ld_mtx,
               value_type* dr_factor, index_type ld_r_factor,
               value_type* hat_mtx, std::shared_ptr<Context<device_type>> context);
@@ -264,7 +264,7 @@ public:
         precond_state->allocate(dmtx->get_size()[0], dmtx->get_size()[1], 
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1], sketch_mtx_->get_size()[0],
             sketch_mtx_->get_size()[0]);
-        generate_old(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
+        compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
             sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
             dmtx->get_size()[0], dmtx->get_size()[1],
             dmtx->get_values(), dmtx->get_size()[0], this->precond_mtx_->get_values(),
@@ -285,7 +285,7 @@ public:
         precond_state->allocate(this->mtx_->get_size()[0], this->mtx_->get_size()[1], 
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1], sketch_mtx_->get_size()[0],
             sketch_mtx_->get_size()[0]);
-        generate_old(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
+        compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
             sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
             this->mtx_->get_size()[0], this->mtx_->get_size()[1],
             this->mtx_->get_values(), this->mtx_->get_size()[0],

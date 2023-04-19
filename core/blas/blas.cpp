@@ -114,6 +114,27 @@ void trsv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
     magma_strsv(uplo, trans, diag, n, dA, ldda, dx, incx, queue);
 }
 
+void trsm(magma_side_t side, magma_uplo_t uplo, magma_trans_t trans,
+          magma_diag_t diag, magma_int_t m, magma_int_t n,
+          double alpha, magmaDouble_const_ptr dA,
+          magma_int_t ldda, magmaDouble_ptr dB,
+          magma_int_t lddb, magma_queue_t queue)	
+{
+    magma_dtrsm(side, uplo, trans, diag, m, n, alpha, dA,
+                ldda, dB, lddb, queue)	;
+}
+
+void trsm(magma_side_t side, magma_uplo_t uplo, magma_trans_t trans,
+          magma_diag_t diag, magma_int_t m, magma_int_t n,
+          float alpha, magmaFloat_const_ptr dA,
+          magma_int_t ldda, magmaFloat_ptr dB,
+          magma_int_t lddb, magma_queue_t queue)	
+{
+    magma_strsm(side, uplo, trans, diag, m, n, alpha, dA,
+                ldda, dB, lddb, queue)	;
+}
+
+
 
 void trmv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
           magma_int_t n, magmaDouble_const_ptr dA, magma_int_t ldda,
@@ -129,7 +150,33 @@ void trmv(magma_uplo_t uplo, magma_trans_t trans, magma_diag_t diag,
     magma_strmv(uplo, trans, diag, n, dA, ldda, dx, incx, queue);
 }
 
+magma_int_t trtri(magma_uplo_t uplo, magma_diag_t diag, magma_int_t n,
+                  magmaDouble_ptr dA, magma_int_t ldda, magma_int_t* info) {
+    return magma_dtrtri_gpu(uplo, diag, n, dA, ldda, info);
+}
 
+magma_int_t trtri(magma_uplo_t uplo, magma_diag_t diag, magma_int_t n,
+                  magmaFloat_ptr dA, magma_int_t ldda, magma_int_t* info) {
+    return magma_strtri_gpu(uplo, diag, n, dA, ldda, info);
+}
+
+
+void trmm(magma_side_t side, magma_uplo_t uplo,
+         magma_trans_t trans, magma_diag_t diag, magma_int_t m,
+         magma_int_t n, double alpha, magmaDouble_const_ptr dA,
+         magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb,
+         magma_queue_t queue) {
+    magma_dtrmm(side, uplo, trans, diag, m, n, alpha, dA, ldda, dB, lddb, queue);
+}
+
+
+void trmm(magma_side_t side, magma_uplo_t uplo,
+         magma_trans_t trans, magma_diag_t diag, magma_int_t m,
+         magma_int_t n, float alpha, magmaFloat_const_ptr dA,
+         magma_int_t ldda, magmaFloat_ptr dB, magma_int_t lddb,
+         magma_queue_t queue) {
+    magma_strmm(side, uplo, trans, diag, m, n, alpha, dA, ldda, dB, lddb, queue);
+}
 
 // template <ContextType device_type = CUDA>
 // void gemm(magma_trans_t transA, magma_trans_t transB, magma_int_t m,
