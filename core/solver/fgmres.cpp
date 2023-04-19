@@ -111,40 +111,26 @@ void step_1(dim2 size, matrix::Dense<value_type, device_type>* mtx,
     auto z = vectors->z_basis + global_len * cur_iter;
     auto v = vectors->v_basis + global_len * cur_iter;
     auto w = vectors->v_basis + global_len * (cur_iter + 1);
-
-    // if (cur_iter == 1) {
-        // std::cout << "cur_iter: (before)" << cur_iter << "\n";
-        // io::print_mtx_gpu(5, 1, z, global_len, queue);
-    // }
-
     blas::copy(global_len, v, 1, z, 1, queue);
-    if (cur_iter == 1) {
-        std::cout << "z: (before)" << '\n';
-        io::print_mtx_gpu(5, 1, &z[global_len-10], global_len, queue);
-    }
-    precond->apply(MagmaNoTrans, z, 1);
-    if (cur_iter == 1) {
-        std::cout << "z: " << '\n';
-        io::print_mtx_gpu(5, 1, &z[global_len-10], global_len, queue);
-       // io::write_mtx("test2.mtx", global_len, 1, z, global_len, queue);
-    }
-
     if (typeid(value_type_in) != typeid(value_type)) {
         value_type_in* z_in = nullptr;
         value_type_in* w_in = nullptr;
         value_type_in* temp_in = nullptr;
         value_type_in* mtx_in = nullptr;
-        // rls::utils::convert(global_len, 1, z, global_len, z_in, global_len);
-        // rls::utils::convert(global_len, 1, w, global_len, w_in, global_len);
+        rls::utils::convert(global_len, 1, z, global_len, z_in, global_len);
+        rls::utils::convert(global_len, 1, w, global_len, w_in, global_len);
+        precond->apply(MagmaNoTrans, z, 1);
         fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx_in,
                      size[0], z_in, 1, 0.0, w_in, 1, temp_in, queue);
-        // rls::utils::convert(global_len, 1, w_in, global_len, w, global_len);
+        precond->apply(MagmaTrans, w_in, 1);
+        rls::utils::convert(global_len, 1, w_in, global_len, w, global_len);
     }
     else {
+        precond->apply(MagmaNoTrans, z, 1);
         fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx->get_values(),
                      size[0], z, 1, 0.0, w, 1, vectors->temp, queue);
+        precond->apply(MagmaTrans, w, 1);
     }
-    precond->apply(MagmaTrans, w, 1);
 }
 
 template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
