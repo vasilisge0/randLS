@@ -97,6 +97,10 @@ public:
         return std::unique_ptr<Context>(new Context(type));
     }
 
+    void enable_tf32_flag() { use_tf32 = true; }
+
+    void disable_tf32_flag() { use_tf32 = false; }
+
     void use_tf32_math_operations()
     {
         cublasSetMathMode(cublas_handle, CUBLAS_TF32_TENSOR_OP_MATH);
@@ -119,8 +123,13 @@ public:
         return rand_generator;
     }
 
+    bool is_tf32_used() {
+        return use_tf32;
+    }
+
 private:
     magma_queue_t queue;
+    bool use_tf32 = false;
     ContextType type_;
     cudaStream_t cuda_stream;
     cublasHandle_t cublas_handle;

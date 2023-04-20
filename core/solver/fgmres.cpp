@@ -72,17 +72,15 @@ void initialize(
 {
     auto global_length = size[0] + size[1];
     index_type inc_v = 1;
+    value_type one = 1.0;
+    value_type minus_one = -1.0;
     blas::copy(global_length, rhs, inc_v, vectors->residual, inc_v, queue);
-
-    fgmres::gemv(MagmaNoTrans, size[0], size[1], -1.0, mtx, size[0], sol,
-                 vectors->inc, 1.0, vectors->residual, vectors->inc,
+    fgmres::gemv(MagmaNoTrans, size[0], size[1], minus_one, mtx, size[0], sol,
+                 vectors->inc, one, vectors->residual, vectors->inc,
                  vectors->temp, queue);
 
     // Left apply.
     precond->apply(MagmaTrans, vectors->residual, vectors->inc);
-    std::cout<<"res: <<< \n";
-    io::print_mtx_gpu(5, 1, vectors->residual,
-        global_length, queue);
     scalars->beta =
         blas::norm2(global_length, vectors->residual, vectors->inc, queue);
     vectors->tmp_cpu->get_values()[0] = scalars->beta;
@@ -111,24 +109,26 @@ void step_1(dim2 size, matrix::Dense<value_type, device_type>* mtx,
     auto z = vectors->z_basis + global_len * cur_iter;
     auto v = vectors->v_basis + global_len * cur_iter;
     auto w = vectors->v_basis + global_len * (cur_iter + 1);
+    value_type one = 1.0;
+    value_type zero = 0.0;
     blas::copy(global_len, v, 1, z, 1, queue);
     if (typeid(value_type_in) != typeid(value_type)) {
         value_type_in* z_in = nullptr;
         value_type_in* w_in = nullptr;
         value_type_in* temp_in = nullptr;
         value_type_in* mtx_in = nullptr;
-        rls::utils::convert(global_len, 1, z, global_len, z_in, global_len);
-        rls::utils::convert(global_len, 1, w, global_len, w_in, global_len);
+        // rls::utils::convert(global_len, 1, z, global_len, z_in, global_len);
+        // rls::utils::convert(global_len, 1, w, global_len, w_in, global_len);
         precond->apply(MagmaNoTrans, z, 1);
-        fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx_in,
-                     size[0], z_in, 1, 0.0, w_in, 1, temp_in, queue);
+        fgmres::gemv(MagmaNoTrans, size[0], size[1], one, mtx_in,
+                     size[0], z_in, 1, zero, w_in, 1, temp_in, queue);
         precond->apply(MagmaTrans, w_in, 1);
-        rls::utils::convert(global_len, 1, w_in, global_len, w, global_len);
+        // rls::utils::convert(global_len, 1, w_in, global_len, w, global_len);
     }
     else {
         precond->apply(MagmaNoTrans, z, 1);
-        fgmres::gemv(MagmaNoTrans, size[0], size[1], 1.0, mtx->get_values(),
-                     size[0], z, 1, 0.0, w, 1, vectors->temp, queue);
+        fgmres::gemv(MagmaNoTrans, size[0], size[1], one, mtx->get_values(),
+                     size[0], z, 1, zero, w, 1, vectors->temp, queue);
         precond->apply(MagmaTrans, w, 1);
     }
 }
@@ -142,7 +142,6 @@ void step_2(dim2 size, matrix::Dense<value_type, device_type>* mtx,
             temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
             index_type cur_iter, index_type max_iter, magma_queue_t queue)
 {
-    magma_queue_sync(queue);
     auto global_len = size[0] + size[1];
     auto ld = max_iter + 1;
     auto hessenberg_mtx = vectors->hessenberg_mtx;
@@ -161,7 +160,6 @@ void step_2(dim2 size, matrix::Dense<value_type, device_type>* mtx,
     hessenberg_mtx[cur_iter + 1 + ld*cur_iter] = w_norm;
     scalars->h = w_norm;
 
-
     // Solve here using givens qr.
     fgmres::givens_qr(size, hessenberg_mtx,
               (max_iter + 1), vectors->hessenberg_rhs,
@@ -179,14 +177,10 @@ void step_2(dim2 size, matrix::Dense<value_type, device_type>* mtx,
                hessenberg_rhs_gpu, 1, queue);
     magma_queue_sync(queue);
 
-    if (typeid(value_type_in) != typeid(value_type)) {
-        
-    }
-    else {
-        blas::gemv(MagmaNoTrans, global_len, cur_iter + 1, 1.0, vectors->z_basis,
-                   global_len, hessenberg_rhs_gpu, 1,
-                   0.0, sol->get_values(), 1, queue);
-    }
+    // Update solution x.
+    blas::gemv(MagmaNoTrans, global_len, cur_iter + 1, 1.0, vectors->z_basis,
+               global_len, hessenberg_rhs_gpu, 1,
+               0.0, sol->get_values(), 1, queue);
 }
 
 template <typename value_type, typename index_type, ContextType device_type>
@@ -238,7 +232,7 @@ void run_fgmres(
     *t_solve = 0.0;
     auto size = mtx->get_size();
     auto global_length = size[0] + size[1];
-    fgmres::initialize<double, double, magma_int_t>(size, mtx->get_values(),
+    fgmres::initialize(size, mtx->get_values(),
         sol->get_values(), rhs->get_values(), precond, scalars, vectors, queue);
     double t = magma_sync_wtime(queue);
     while (1) {
@@ -266,6 +260,26 @@ template void run_fgmres(
         precond,
     fgmres::temp_scalars<double, magma_int_t>* scalars,
     fgmres::temp_vectors<double, double, magma_int_t, CUDA>* vectors,
+    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+    magma_queue_t queue, double* t_solve);
+
+// template void run_fgmres(
+    // matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
+    // matrix::Dense<double, CUDA>* sol,
+    // preconditioner::preconditioner<float, double, magma_int_t, CUDA>*
+        // precond,
+    // fgmres::temp_scalars<double, magma_int_t>* scalars,
+    // fgmres::temp_vectors<float, double, magma_int_t, CUDA>* vectors,
+    // magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+    // magma_queue_t queue, double* t_solve);
+
+template void run_fgmres(
+    matrix::Dense<float, CUDA>* mtx, matrix::Dense<float, CUDA>* rhs,
+    matrix::Dense<float, CUDA>* sol,
+    preconditioner::preconditioner<float, float, magma_int_t, CUDA>*
+        precond,
+    fgmres::temp_scalars<float, magma_int_t>* scalars,
+    fgmres::temp_vectors<float, float, magma_int_t, CUDA>* vectors,
     magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
     magma_queue_t queue, double* t_solve);
 

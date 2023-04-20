@@ -90,11 +90,11 @@ public:
 
         // Allocates memory for matrices.
         this->precond_mtx_ = matrix::Dense<value_type, device_type>::create(context, {sampled_rows, size[1]});
-        this->precond_mtx_internal_ = matrix::Dense<value_type, device_type>::create(context, {sampled_rows, size[1]});
+        this->precond_mtx_internal_ = matrix::Dense<value_type_in, device_type>::create(context, {sampled_rows, size[1]});
         this->dt_ = matrix::Dense<value_type, device_type>::create(context, size);
-        this->mtx_rp_ = matrix::Dense<value_type, device_type>::create(context, size);
-        this->dsketch_rp_ = matrix::Dense<value_type, device_type>::create(context, {sampled_rows, size[0]});
-        this->dresult_rp_ = matrix::Dense<value_type, device_type>::create(context, {sampled_rows, size[1]});
+        this->mtx_rp_ = matrix::Dense<value_type_in, device_type>::create(context, size);
+        this->dsketch_rp_ = matrix::Dense<value_type_in, device_type>::create(context, {sampled_rows, size[0]});
+        this->dresult_rp_ = matrix::Dense<value_type_in, device_type>::create(context, {sampled_rows, size[1]});
         dim2 s = {size[0], 1};
         this->tau_ = matrix::Dense<value_type, CPU>::create(context_cpu, s);
 
@@ -116,6 +116,16 @@ public:
     static std::unique_ptr<
         GeneralizedSplit<value_type_in, value_type, index_type>>
     create(std::shared_ptr<matrix::Dense<value_type, device_type>> mtx)
+    {
+        return std::unique_ptr<
+            GeneralizedSplit<value_type_in, value_type, index_type>>(
+            new GeneralizedSplit<value_type_in, value_type, index_type>(mtx));
+    }
+
+    static std::unique_ptr<
+        GeneralizedSplit<value_type_in, value_type, index_type>>
+    create(std::shared_ptr<Context<device_type>> context,
+           std::shared_ptr<matrix::Dense<value_type, device_type>> mtx)
     {
         return std::unique_ptr<
             GeneralizedSplit<value_type_in, value_type, index_type>>(
@@ -147,26 +157,10 @@ public:
         }
     }
 
-    void compute(matrix::Dense<value_type, device_type>* dmtx)
-    {
-        value_type* hat_mtx = nullptr;
-        double runtime;
-        auto precond_state = new state<value_type_in, value_type,
-        index_type>(); double runtime_local; double t_mm; double t_qr;
-        precond_state->allocate(dmtx->get_size()[0], dmtx->get_size()[1],
-            sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
-            sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[0]);
-        compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
-            sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
-            dmtx->get_size()[0], dmtx->get_size()[1],
-            dmtx->get_values(), dmtx->get_size()[0],
-        this->precond_mtx_->get_values(), this->precond_mtx_->get_size()[0],
-            precond_state,
-        this->context_, &runtime_local, &t_mm, &t_qr);
-            precond_state->free();
-    }
-
     void compute() {
+        if (this->context_->is_tf32_used() == true) {
+            this->context_->use_tf32_math_operations();
+        }
         value_type* hat_mtx = nullptr;
         double runtime;
         auto precond_state = new state<value_type_in, value_type,
@@ -177,6 +171,7 @@ public:
         precond_state->allocate(this->mtx_->get_size()[0], this->mtx_->get_size()[1],
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[0]);
+        
         compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
             sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
             this->mtx_->get_size()[0], this->mtx_->get_size()[1],
@@ -193,6 +188,9 @@ public:
                     this->precond_mtx_->get_values(),
                     this->precond_mtx_->get_size()[0],
                     &status);
+        if (this->context_->is_tf32_used() == true) {
+            this->context_->disable_tf32_math_operations();
+        }
     }
 
     matrix::Dense<value_type, device_type>* get_mtx() { return this->precond_mtx_.get(); }
@@ -208,6 +206,15 @@ private:
         this->precond_type_ = GENERALIZED_SPLIT;
         this->sampling_coeff_ = 1.5;
         this->context_ = context;
+    }
+
+    GeneralizedSplit(std::shared_ptr<Context<device_type>> context,
+        std::shared_ptr<matrix::Dense<value_type, device_type>> mtx)
+    {
+        this->context_ = context;
+        this->precond_type_ = GENERALIZED_SPLIT;
+        this->sampling_coeff_ = 1.5;
+        this->mtx_ = mtx;
     }
 
     GeneralizedSplit(std::shared_ptr<matrix::Dense<value_type, device_type>> mtx)

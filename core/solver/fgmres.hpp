@@ -106,7 +106,7 @@ struct temp_scalars {
 
 // Specialized gemv operation for Fgmres on the generalized system
 // [I A; A' 0] for input m x n matrix A and m >> n.
-template <typename value_type, typename index_type>
+template<typename value_type, typename index_type>
 void gemv(magma_trans_t trans, index_type num_rows, index_type num_cols,
           value_type alpha, value_type* mtx, index_type ld,
           value_type* u_vector, index_type inc_u, value_type beta,
@@ -160,7 +160,6 @@ public:
         this->precond_ = precond_in;
         this->tolerance_ = tolerance_in;
         use_precond_ = true;
-        // generate();
     }
 
     Fgmres(preconditioner::generic_preconditioner<device_type>* precond_in,
@@ -171,7 +170,6 @@ public:
         this->tolerance_ = tolerance_in;
         this->max_iter_ = max_iter_in;
         this->use_precond_ = true;
-        // generate();
     }
 
     Fgmres(preconditioner::generic_preconditioner<device_type>* precond_in,
@@ -187,6 +185,9 @@ public:
         use_precond_ = true;
         auto num_rows = this->mtx_->get_size()[0];
         auto num_cols = this->mtx_->get_size()[1];
+        std::cout << "this->mtx_->get_size()[0]: " << this->mtx_->get_size()[0] << ", this->mtx_->get_size()[1]: " << this->mtx_->get_size()[1] << '\n';
+        std::cout << "mtx->get_size()[0]: " << mtx->get_size()[0] << ", mtx->get_size()[1]: " << mtx->get_size()[1] << '\n';
+        std::cout << "rhs->get_size()[0]: " << rhs->get_size()[0] << ", rhs->get_size()[1]: " << rhs->get_size()[1] << '\n';
     }
 
     // Create method (1) of Fgmres solver

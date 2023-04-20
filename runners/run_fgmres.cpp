@@ -44,10 +44,10 @@ int main(int argc, char* argv[]) {
     args.assign(argv, argv + argc);
     std::string input_runfile  = args[0];
     std::string input_tol = args[1];
-    std::string input_precond_in_prec = args[2];
-    std::string input_precond_prec = args[3];
-    std::string input_solver_in_prec = args[4];
-    std::string input_solver_prec = args[5];
+    std::string input_precond_prec = args[2];
+    std::string input_precond_in_prec = args[3];
+    std::string input_solver_prec = args[4];
+    std::string input_solver_in_prec = args[5];
     std::string input_mtx = args[6];
     std::string input_rhs = args[7];
     std::string input_precond_type = args[8];
@@ -82,18 +82,13 @@ int main(int argc, char* argv[]) {
     enum GlobalDataType data_type_solver;
 
     std::shared_ptr<rls::Context<rls::CUDA>> context = rls::Context<rls::CUDA>::create();
-
     std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> mtx = rls::matrix::Dense<double, rls::CUDA>::create(context, input_mtx);
     std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> rhs = rls::matrix::Dense<double, rls::CUDA>::create(context, input_rhs);
-
-    rls::io::print_mtx_gpu(2, 2, mtx->get_values(), 5, mtx->get_context()->get_queue());
-
-    auto con = mtx->get_context();
-    auto queue = con->get_queue();
 
     // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
+    std::cout << "precond_prec_type: " << precond_prec_type << '\n';
     switch (precond_prec_type) {
         case 0:
         {
@@ -101,29 +96,34 @@ int main(int argc, char* argv[]) {
             precond = rls::preconditioner::GeneralizedSplit<double, double, magma_int_t>::create(mtx);
             break;
         }
-
         case 1:
         {
             data_type_precond = FP64;
             // precond = rls::preconditioner::gaussian<float, double, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx);
             break;
         }
         case 2:
         {
             data_type_precond = FP64;
-            // precond = rls::preconditioner::gaussian<__half, double, magma_int_t>::create(mtx);
-            break;  
+            // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx);
+            break;
         }
         case 3:
         {
             data_type_precond = FP64;
-            // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
-            break;
+            context->enable_tf32_flag();
+            precond = rls::preconditioner::GeneralizedSplit<__half, double, magma_int_t>::create(context, mtx);
+            context->disable_tf32_flag();
+            break;  
         }
         case 4:
         {
-            data_type_precond = FP64;
-            // precond = rls::preconditioner::gaussian<__half, float, magma_int_t>::create(mtx);
+            data_type_precond = FP32;
+            std::shared_ptr<rls::matrix::Dense<float, rls::CUDA>> mtx_fp32 = rls::matrix::Dense<float, rls::CUDA>::create(context);
+            mtx_fp32->copy_from(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<float, float, magma_int_t>::create(std::move(mtx_fp32));
             break;
         }
         case 5:
@@ -161,19 +161,23 @@ int main(int argc, char* argv[]) {
         case 2:
         {
             data_type_solver = FP64;
-            // solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
-            break;  
+            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            break;
         }
         case 3:
         {
             data_type_solver = FP64;
-            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
-            break;
+            // solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            break;  
         }
         case 4:
         {
-            data_type_solver = FP64;
-            // solver = rls::solver::lsqr<float, float, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            data_type_solver = FP32;
+            std::shared_ptr<rls::matrix::Dense<float, rls::CUDA>> mtx_fp32 = rls::matrix::Dense<float, rls::CUDA>::create(context);
+            std::shared_ptr<rls::matrix::Dense<float, rls::CUDA>> rhs_fp32 = rls::matrix::Dense<float, rls::CUDA>::create(context);
+            mtx_fp32->copy_from(mtx);
+            rhs_fp32->copy_from(rhs);
+            solver = rls::solver::Fgmres<float, float, magma_int_t, rls::CUDA>::create(precond.get(), std::move(mtx_fp32), std::move(rhs_fp32), tol);
             break;
         }
         case 5:
@@ -193,9 +197,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Exit if the "outer" precision in both the preconditioner and the solver are different.
-    if (data_type_solver != data_type_precond) {
-       return 0;
-    }
+    // if (data_type_solver != data_type_precond) {
+    //    return 0;
+    // }
 
     solver->generate();
     solver->run();

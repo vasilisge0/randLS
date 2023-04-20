@@ -7,10 +7,17 @@ namespace rls {
 namespace utils {
 
 
-template <typename value_type_in, typename value_type_out, typename index_type,
-          ContextType device_type=CUDA>
-void convert(index_type num_rows, index_type num_cols, value_type_in* values_in, index_type ld_in,
+template <typename value_type_in, typename value_type_out, typename index_type>
+void convert(std::shared_ptr<Context<CUDA>> context, index_type num_rows, index_type num_cols, value_type_in* values_in, index_type ld_in,
              value_type_out* values_out, index_type ld_out);
+
+
+
+
+template <typename value_type_in, typename value_type_out, typename index_type>
+void convert(std::shared_ptr<Context<CPU>> context, index_type num_rows, index_type num_cols, value_type_in* values_in, index_type ld_in,
+             value_type_out* values_out, index_type ld_out);
+
 
 }
 }

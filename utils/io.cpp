@@ -79,6 +79,17 @@ void read_mtx_values<double, CUDA>(std::shared_ptr<Context<CUDA>> context, char*
        size[0], values, size[0], queue);
 }
 
+template <>
+void read_mtx_values<float, CUDA>(std::shared_ptr<Context<CUDA>> context, char* filename_mtx, dim2 size, float* values) {
+    std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create(CPU);
+    auto tmp = matrix::Dense<float, CPU>::create(context_cpu, size);
+    auto queue = context->get_queue();
+    io::read_mtx_values<float, CPU>(context_cpu, filename_mtx, size,
+       tmp->get_values());
+    memory::setmatrix(size[0], size[1], tmp->get_values(),
+       size[0], values, size[0], queue);
+}
+
 //template <>
 //void read_mtx_values<float, CUDA>(std::shared_ptr<Context> context, char* filename_mtx, dim2 size, float* values) {
 //    std::shared_ptr<Context> context_cpu = Context::create(CPU);

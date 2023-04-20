@@ -28,6 +28,8 @@ void malloc_cpu(double** ptr_ptr, size_t n);
 
 void malloc_cpu(float** ptr_ptr, size_t n);
 
+void malloc_cpu(__half** ptr_ptr, size_t n);
+
 void malloc_cpu(magma_int_t** ptr_ptr, size_t n);
 
 void free(magmaDouble_ptr ptr);
@@ -41,6 +43,8 @@ void free(magma_int_t* ptr);
 void free_cpu(double* ptr);
 
 void free_cpu(float* ptr);
+
+void free_cpu(__half* ptr);
 
 void free_cpu(magma_int_t* ptr);
 

@@ -11,6 +11,7 @@ add_library(mix_n_pick SHARED
             cuda/solver/lsqr_kernels.cu
             cuda/preconditioner/preconditioner_kernels.cu
             utils/init_kernels.cpp
+            core/dense/dense.cpp
             core/blas/blas.cpp
             core/memory/memory.cpp
             core/preconditioner/gaussian.cpp
