@@ -39,7 +39,6 @@ enum GlobalDataType{
 
 
 int main(int argc, char* argv[]) {
-
     std::vector<std::string> args;
     args.assign(argv, argv + argc);
     std::string input_runfile  = args[0];

@@ -65,7 +65,7 @@ template <typename value_type_in, typename value_type, typename index_type, Cont
 void initialize(
     std::shared_ptr<Context<device_type>> context,
     dim2 size, value_type* mtx, value_type* sol, value_type* rhs,
-    preconditioner::preconditioner<value_type_in, index_type>*
+    preconditioner::preconditioner<value_type, index_type>*
     precond,
     fgmres::temp_scalars<value_type, index_type>* scalars,
     fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
@@ -81,15 +81,15 @@ void initialize(
                  vectors->temp, queue);
 
     // Left apply.
-    if (typeid(value_type_in) != typeid(value_type)) {
-        value_type_in* residual_in = vectors->v_in;
-        rls::utils::convert(context, global_length, 1, vectors->residual, global_length, residual_in, global_length);
-        precond->apply(MagmaTrans, residual_in, vectors->inc);
-        rls::utils::convert(context, global_length, 1, residual_in, global_length, vectors->residual, global_length);
-    }
-    else {
-        precond->apply(MagmaTrans, (value_type_in*)vectors->residual, vectors->inc);
-    }
+    // if (typeid(value_type_in) != typeid(value_type)) {
+        // value_type_in* residual_in = vectors->v_in;
+        // rls::utils::convert(context, global_length, 1, vectors->residual, global_length, residual_in, global_length);
+        // precond->apply(MagmaTrans, residual_in, vectors->inc);
+        // rls::utils::convert(context, global_length, 1, residual_in, global_length, vectors->residual, global_length);
+    // }
+    // else {
+    // }
+    precond->apply(MagmaTrans, vectors->residual, vectors->inc);
 
     scalars->beta =
         blas::norm2(global_length, vectors->residual, vectors->inc, queue);
@@ -110,7 +110,7 @@ void initialize(
 
 template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 void step_1(std::shared_ptr<Context<device_type>> context, dim2 size, matrix::Dense<value_type, device_type>* mtx,
-            preconditioner::preconditioner<value_type_in,
+            preconditioner::preconditioner<value_type,
                                            index_type, device_type>* precond,
             temp_scalars<value_type, index_type>* scalars,
             temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
@@ -121,6 +121,7 @@ void step_1(std::shared_ptr<Context<device_type>> context, dim2 size, matrix::De
     auto v = vectors->v_basis + global_len * cur_iter;
     auto w = vectors->v_basis + global_len * (cur_iter + 1);
     blas::copy(global_len, v, 1, z, 1, queue);
+    precond->apply(MagmaNoTrans, z, 1);
     if (typeid(value_type_in) != typeid(value_type)) {
         value_type_in one = 1.0;
         value_type_in zero = 0.0;
@@ -130,26 +131,23 @@ void step_1(std::shared_ptr<Context<device_type>> context, dim2 size, matrix::De
         value_type_in* mtx_in = vectors->mtx_in;
         rls::utils::convert(context, global_len, 1, z, global_len, z_in, global_len);
         rls::utils::convert(context, global_len, 1, w, global_len, w_in, global_len);
-        precond->apply(MagmaNoTrans, z_in, 1);
         fgmres::gemv(MagmaNoTrans, size[0], size[1], one, mtx_in,
                      size[0], z_in, 1, zero, w_in, 1, temp_in, queue);
-        precond->apply(MagmaTrans, w_in, 1);
         rls::utils::convert(context, global_len, 1, w_in, global_len, w, global_len);
     }
     else {
         value_type one = 1.0;
         value_type zero = 0.0;
-        precond->apply(MagmaNoTrans, (value_type_in*)z, 1);
         fgmres::gemv(MagmaNoTrans, size[0], size[1], one, mtx->get_values(),
                      size[0], z, 1, zero, w, 1, vectors->temp, queue);
-        precond->apply(MagmaTrans, (value_type_in*)w, 1);
     }
+    precond->apply(MagmaTrans, w, 1);
 }
 
 template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 void step_2(std::shared_ptr<Context<device_type>> context, dim2 size, matrix::Dense<value_type, device_type>* mtx,
             matrix::Dense<value_type, device_type>* sol,
-            preconditioner::preconditioner<value_type_in,
+            preconditioner::preconditioner<value_type,
                                            index_type, device_type>* precond,
             temp_scalars<value_type, index_type>* scalars,
             temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
@@ -234,7 +232,7 @@ void run_fgmres(
     matrix::Dense<value_type, device_type>* mtx,
     matrix::Dense<value_type, device_type>* rhs,
     matrix::Dense<value_type, device_type>* sol,
-    preconditioner::preconditioner<value_type_in, index_type, device_type>*
+    preconditioner::preconditioner<value_type, index_type, device_type>*
         precond,
     fgmres::temp_scalars<value_type, index_type>* scalars,
     fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
@@ -280,7 +278,7 @@ template void run_fgmres(
 template void run_fgmres(
     matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
     matrix::Dense<double, CUDA>* sol,
-    preconditioner::preconditioner<float, magma_int_t, CUDA>*
+    preconditioner::preconditioner<double, magma_int_t, CUDA>*
         precond,
     fgmres::temp_scalars<double, magma_int_t>* scalars,
     fgmres::temp_vectors<float, double, magma_int_t, CUDA>* vectors,

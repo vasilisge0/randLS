@@ -69,30 +69,6 @@ public:
 
     std::shared_ptr<matrix::Dense<value_type, device_type>> get_mtx() { return mtx_; }
 
-    template<typename value_type_out>
-    std::shared<preconditioner<value_type_out, index_type, device_type>> convert_to();
-
-    // template<typename value_type_in>
-    // void convert_from(preconditioner<value_type_in, index_type, device_type>* precond) {
-    //     std::cout << "in convert\n";
-    //     auto c = precond->get_mtx()->get_context();
-    //     std::cout << "before create mtx\n";
-    //     // this->mtx_ = matrix::Dense<value_type, device_type>::create(c);
-    //     // std::cout << "after create mtx\n";
-    //     // this->precond_mtx_ = matrix::Dense<value_type, device_type>::create(c);
-    //     // = std::make_shared<matrix::Dense<value_type, device_type>>(matrix::Dense<value_type, device_type>::create());
-    //         // std::cout << "test\n";
-    //     // this->precond_mtx_ = std::make_shared<matrix::Dense<value_type, device_type>>(c);
-    //     // this->precond_mtx_ = matrix::Dense<value_type, device_type>(precond->get_mtx()->get_context());
-    //     auto s = precond->get_mtx();
-    //     std::cout << "before copy from\n";
-    //     std::cout << "before print_test()\n";
-    //     this->mtx_->print_test();
-    //     std::cout << "after print_test()\n";
-    //     this->mtx_->copy_from(precond->get_mtx());
-    //     std::cout << "after convert\n";
-    // }
-
 protected:
     std::shared_ptr<matrix::Dense<value_type, device_type>> precond_mtx_;
     std::shared_ptr<matrix::Dense<value_type, device_type>> mtx_;

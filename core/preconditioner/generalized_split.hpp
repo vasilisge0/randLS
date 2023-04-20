@@ -61,9 +61,9 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
                   double* t_mm, double* t_qr);
 
 
-template <typename value_type_apply, typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
 class GeneralizedSplit
-    : public preconditioner<value_type_apply, value_type_in, value_type, index_type, device_type> {
+    : public preconditioner<value_type, index_type, device_type> {
 public:
 
     void generate() {
