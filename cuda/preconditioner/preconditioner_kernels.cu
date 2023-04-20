@@ -292,6 +292,30 @@ __global__ void convert_kernel(index_type num_rows, index_type num_cols,
     }
 }
 
+template <typename index_type>
+__global__ void convert_kernel(index_type num_rows, index_type num_cols,
+                              double* mtx_in, index_type ld_in, double* mtx_out,
+                              index_type ld_out)
+{
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    auto col = blockIdx.y * blockDim.y + threadIdx.y;
+    if ((row < num_rows) && (col < num_cols)) {
+        mtx_out[row + ld_out * col] = (mtx_in[row + ld_in * col]);
+    }
+}
+
+template <typename index_type>
+__global__ void convert_kernel(index_type num_rows, index_type num_cols,
+                              float* mtx_in, index_type ld_in, float* mtx_out,
+                              index_type ld_out)
+{
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    auto col = blockIdx.y * blockDim.y + threadIdx.y;
+    if ((row < num_rows) && (col < num_cols)) {
+        mtx_out[row + ld_out * col] = (mtx_in[row + ld_in * col]);
+    }
+}
+
 template __global__ void convert_kernel(magma_int_t num_rows,
                                        magma_int_t num_cols, double* mtx_in,
                                        magma_int_t ld_in, __half* mtx_out,
@@ -322,6 +346,16 @@ template __global__ void convert_kernel(magma_int_t num_rows,
                                         magma_int_t ld_in, double* mtx_out,
                                         magma_int_t ld_out);
 
+template __global__ void convert_kernel(magma_int_t num_rows,
+                                        magma_int_t num_cols, double* mtx_in,
+                                        magma_int_t ld_in, double* mtx_out,
+                                        magma_int_t ld_out);
+// 
+template __global__ void convert_kernel(magma_int_t num_rows,
+                                        magma_int_t num_cols, float* mtx_in,
+                                        magma_int_t ld_in, float* mtx_out,
+                                        magma_int_t ld_out);
+
 template <typename value_type_in, typename value_type_out, typename index_type>
 __host__ void convert(index_type num_rows, index_type num_cols,
                       value_type_in* mtx_in, index_type ld_in, value_type_out* mtx_out,
@@ -338,6 +372,10 @@ __host__ void convert(index_type num_rows, index_type num_cols,
 
 template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
                       double* mtx_in, magma_int_t ld_in, float* mtx_out,
+                      magma_int_t ld_out);
+
+template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
+                      double* mtx_in, magma_int_t ld_in, double* mtx_out,
                       magma_int_t ld_out);
 
 template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
@@ -358,6 +396,10 @@ template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
 
 template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
                       float* mtx_in, magma_int_t ld_in, double* mtx_out,
+                      magma_int_t ld_out);
+
+template __host__  void convert(magma_int_t num_rows, magma_int_t num_cols,
+                      float* mtx_in, magma_int_t ld_in, float* mtx_out,
                       magma_int_t ld_out);
 
 

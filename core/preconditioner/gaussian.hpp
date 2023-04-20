@@ -80,7 +80,7 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
 
 
 template<typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
-class gaussian : public preconditioner<value_type_in, value_type, index_type, device_type> {
+class gaussian : public preconditioner<value_type, index_type, device_type> {
 public:
 
     gaussian() {
@@ -307,6 +307,7 @@ private:
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> mtx_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dsketch_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dresult_rp_;
+    std::unique_ptr<matrix::Dense<value_type_in, device_type>> precond_mtx_internal_;
     std::unique_ptr<matrix::Dense<value_type, CPU>> tau_;
 };
 

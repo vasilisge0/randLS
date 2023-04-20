@@ -91,7 +91,7 @@ void run_lsqr(
     matrix::Dense<value_type, device_type>* mtx,
     matrix::Dense<value_type, device_type>* rhs,
     matrix::Dense<value_type, device_type>* sol,
-    preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>* precond,
+    preconditioner::preconditioner<value_type, index_type, device_type>* precond,
     temp_scalars<value_type, index_type>* scalars,
     temp_vectors<value_type_in, value_type, index_type>* vectors,
     magma_int_t max_iter, double tolerance,
@@ -250,7 +250,7 @@ public:
     {
         auto context = this->context_;
         if (use_precond_) {
-            run_lsqr(mtx_.get(), rhs_.get(), sol_.get(), static_cast<preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>*>(precond_),
+            run_lsqr(mtx_.get(), rhs_.get(), sol_.get(), static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_),
                &scalars_, vectors_.get(), this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_, this->context_->get_queue(), &t_solve_);
         }
         else {

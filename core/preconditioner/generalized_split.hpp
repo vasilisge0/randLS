@@ -61,9 +61,9 @@ void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
                   double* t_mm, double* t_qr);
 
 
-template <typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
+template <typename value_type_apply, typename value_type_in, typename value_type, typename index_type, ContextType device_type=CUDA>
 class GeneralizedSplit
-    : public preconditioner<value_type_in, value_type, index_type, device_type> {
+    : public preconditioner<value_type_apply, value_type_in, value_type, index_type, device_type> {
 public:
 
     void generate() {
@@ -180,6 +180,7 @@ public:
             precond_state,
             this->context_, &runtime_local, &t_mm, &t_qr);
         precond_state->free();
+
         magma_int_t status;
         dim2 s = {this->precond_mtx_->get_size()[1], this->precond_mtx_->get_size()[1]};
         cuda::set_upper_triang(s, this->precond_mtx_->get_values(), this->precond_mtx_->get_size()[0]);
@@ -191,6 +192,14 @@ public:
         if (this->context_->is_tf32_used() == true) {
             this->context_->disable_tf32_math_operations();
         }
+    }
+
+    template<typename value_type_out>
+    std::shared_ptr<GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>> convert_to() {
+        std::shared_ptr<GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>> tmp = GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>::create();
+        tmp->mtx_->copy_from(this->mtx_);
+        tmp->precond_mtx_->copy_from(this->precond_mtx_);
+        return tmp;
     }
 
     matrix::Dense<value_type, device_type>* get_mtx() { return this->precond_mtx_.get(); }
@@ -242,6 +251,7 @@ private:
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> mtx_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dsketch_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dresult_rp_;
+    std::unique_ptr<matrix::Dense<value_type_in, device_type>> precond_mtx_internal_;
     std::unique_ptr<matrix::Dense<value_type, CPU>> tau_;
 };
 

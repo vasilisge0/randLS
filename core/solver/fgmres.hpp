@@ -30,8 +30,9 @@ struct temp_vectors {
     value_type* w;
     value_type* temp;
     value_type* residual;
-    value_type_in* u_in;
+    value_type_in* w_in;
     value_type_in* v_in;
+    value_type_in* z_in;
     value_type_in* temp_in;
     value_type_in* mtx_in;
     value_type* hessenberg_mtx;
@@ -61,8 +62,9 @@ struct temp_vectors {
         memory::malloc_cpu(&hessenberg_rhs, max_iter_ + 1);
         memory::malloc(&residual, global_len);
         if (!std::is_same<value_type_in, value_type>::value) {
-            memory::malloc(&u_in, global_len);
+            memory::malloc(&w_in, global_len);
             memory::malloc(&v_in, global_len);
+            memory::malloc(&z_in, global_len);
             memory::malloc(&temp_in, global_len);
             memory::malloc(&mtx_in, global_len * size[1]);
         }
@@ -85,8 +87,9 @@ struct temp_vectors {
         memory::free_cpu(hessenberg_rhs);
         memory::free(residual);
         if (!std::is_same<value_type_in, value_type>::value) {
-            memory::free(u_in);
+            memory::free(w_in);
             memory::free(v_in);
+            memory::free(z_in);
             memory::free(mtx_in);
             memory::free(temp_in);
         }
@@ -141,7 +144,7 @@ template <typename value_type_in, typename value_type, typename index_type, Cont
 void run_fgmres(
     matrix::Dense<value_type, device_type>* mtx, matrix::Dense<value_type, device_type>* rhs,
     matrix::Dense<value_type, device_type>* sol,
-    preconditioner::preconditioner<value_type_in, value_type, index_type, device_type>*
+    preconditioner::preconditioner<value_type_in, index_type, device_type>*
         precond,
     fgmres::temp_scalars<value_type, index_type>* scalars,
     fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>* vectors,
@@ -228,11 +231,26 @@ public:
     {
         auto context = this->context_;
         if (use_precond_) {
-            run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
-                static_cast<preconditioner::preconditioner<value_type_in,
-                    value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
-                this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
-                this->context_->get_queue(), &t_solve_);
+            std::cout << "in run\n";
+            std::shared_ptr<preconditioner::preconditioner<value_type_in, index_type, device_type>> prec;  
+            if (typeid(value_type) != typeid(value_type_in)) {
+                std::cout << "mixed\n";
+                // auto p = static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_);
+                // std::cout << "before convert\n";
+                // prec = p->convert_to<value_type>();
+                // std::cout << "after convert\n";
+                // run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
+                //     prec.get(), &scalars_, vectors_.get(),
+                //     this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
+                //     this->context_->get_queue(), &t_solve_);
+            }
+            else {
+                std::cout << "before run\n";
+                run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
+                    static_cast<preconditioner::preconditioner<value_type_in, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
+                    this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
+                    this->context_->get_queue(), &t_solve_);
+            }
         } else {
             // Run non-preconditioned FGMRES.
         }

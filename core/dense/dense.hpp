@@ -54,18 +54,42 @@ public:
         this->context_ = mtx.context_;
     }
 
+    void print_test() {
+        std::cout << "test\n";
+    }
+
     template<typename value_type_in>
     void copy_from(std::shared_ptr<matrix::Dense<value_type_in, device_type>> mtx)  {
+
+        std::cout << "---------------------------------------------in copy from-------------------------------------------------\n";
         this->size_ = mtx->get_size();
         this->ld_ = mtx->get_ld();
         this->context_ = mtx->get_context();
+        std::cout << "in copy_from\n";
 
         if (this->alloc_elems == 0) {
             this->malloc();
         }
 
+        std::cout << "before calling convert\n";
         utils::convert(this->context_, this->size_[0], this->size_[1], mtx->get_values(), mtx->get_ld(),
             this->values_, this->ld_);
+    }
+
+    Dense<value_type, device_type>& operator=(Dense<value_type, device_type>&& mtx) {
+        if (*this != mtx) {
+            this->context_ = mtx.get_context();
+            this->ld_ = mtx.get_ld();
+            this->alloc_elems = mtx.get_alloc_elems();
+            this->size = mtx.get_size();
+            this->values = mtx.get_values();
+            mtx.get_values() = nullptr;
+        }
+        return *this;
+    }
+
+    magma_int_t get_alloc_elems() {
+        return alloc_elems;
     }
 
     void zeros()

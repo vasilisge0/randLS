@@ -154,8 +154,9 @@ int main(int argc, char* argv[]) {
         }
         case 1:
         {
+            std::cout << "32/64 execution solver\n";
             data_type_solver = FP64;
-            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            solver = rls::solver::Fgmres<float, double, magma_int_t, rls::CUDA>::create(precond.get(), mtx, rhs, tol);
             break;
         }
         case 2:
