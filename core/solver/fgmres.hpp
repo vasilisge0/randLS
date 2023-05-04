@@ -306,10 +306,34 @@ public:
     {
         auto context = this->context_;
         if (use_precond_) {
-            run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
-                static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
-                this->get_max_iter(), this->get_tolerance(), &this->iter_, &this->resnorm_,
-                this->context_->get_queue(), &this->runtime_);
+            index_type iter = 0;
+            double resnorm = 1.0;
+            for (auto i = 0; i < this->logger_.warmup_runs_; i++) {
+                iter = 0;
+                resnorm = 1.0;
+                glb_sol_->zeros();
+                run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
+                    static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
+                    this->get_max_iter(), this->get_tolerance(), &iter, &resnorm,
+                    this->context_->get_queue(), &this->logger_.runtime_);
+            }
+            this->logger_.runtime_ = 0.0;
+            this->iter_ = 0;
+            this->resnorm_ = 0.0;
+            for (auto i = 0; i < this->logger_.runs_; i++) {
+                iter = 0;
+                resnorm = 1.0;
+                glb_sol_->zeros();
+                run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
+                    static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
+                    this->get_max_iter(), this->get_tolerance(), &iter, &resnorm,
+                    this->context_->get_queue(), &this->logger_.runtime_);
+                this->iter_ += iter;
+                this->resnorm_ += resnorm;
+            }
+            this->logger_.runtime_ = this->logger_.runtime_ / this->logger_.runs_;
+            this->iter_ = this->iter_ / this->logger_.runs_;
+            this->resnorm_ = this->resnorm_ / this->logger_.runs_;
         } else {
             // Run non-preconditioned FGMRES.
         }
@@ -349,7 +373,7 @@ public:
         utils::convert(this->context_, mtx_->get_size()[0], mtx_->get_size()[1],
             this->mtx_->get_values(), mtx_->get_ld(), vectors_->mtx_in,
             this->mtx_->get_ld());
-        
+
         if (use_precond_) {
             precond_->generate();
             precond_->compute();

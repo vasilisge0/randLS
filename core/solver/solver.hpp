@@ -56,6 +56,12 @@ public:
     // virtual void run();
 // };
 
+struct logger {
+    magma_int_t runs_ = 1;
+    magma_int_t warmup_runs_ = 0;
+    double runtime_ = 0.0;
+};
+
 template <ContextType device_type=CUDA>
 class generic_solver {
 public:
@@ -65,9 +71,13 @@ public:
 
     double get_tolerance() { return tolerance_; }
 
-    double get_runtime() { return runtime_; }
+    double get_runtime() { return logger_.runtime_; }
 
     double get_resnorm() { return resnorm_; }
+
+    void set_logger(logger& logger) {
+        this->logger_ = logger;
+    }
 
     magma_int_t get_iterations_completed() { return iter_; }
 
@@ -82,9 +92,9 @@ protected:
     bool use_precond_ = false;
     SolverValueType combined_value_type_;
     SolverType type_;
-    magma_int_t iter_ = 0;
     double resnorm_ = 1.0;
-    double runtime_ = 0.0;
+    magma_int_t iter_ = 0;
+    logger logger_;
 };
 
 // class solver : public AbstractSolver {

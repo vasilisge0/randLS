@@ -147,6 +147,9 @@ int main(int argc, char* argv[]) {
     // Decides the precision of the solver preconditioner depending on the inputs.
     auto solver_prec_type = precision_parser(input_solver_prec, input_solver_in_prec);
     std::shared_ptr<rls::solver::generic_solver<rls::CUDA>> solver;
+    rls::solver::logger solver_logger;
+    solver_logger.warmup_runs_ = warmup_iters;
+    solver_logger.runs_ = runtime_iters;
     switch (solver_prec_type) {
         case 0:
         {
@@ -172,7 +175,7 @@ int main(int argc, char* argv[]) {
         {
             data_type_solver = FP64;
             solver = rls::solver::Fgmres<__half, double, magma_int_t, rls::CUDA>::create(precond.get(), mtx, rhs, tol);
-            break;  
+            break;
         }
         case 4:
         {
@@ -199,6 +202,7 @@ int main(int argc, char* argv[]) {
         default:
             break;
     }
+    solver->set_logger(solver_logger);
 
     // Exit if the "outer" precision in both the preconditioner and the solver are different.
     // if (data_type_solver != data_type_precond) {
