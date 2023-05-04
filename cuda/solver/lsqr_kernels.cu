@@ -147,6 +147,31 @@ template void set_values(magma_int_t num_elems, float val, float* values);
 template void set_values(magma_int_t num_elems, __half val, __half* values);
 
 template <typename value_type, typename index_type>
+__global__ void copy_1d_kernel(index_type num_elems, value_type* v, index_type inc_v, value_type* w, index_type inc_w)
+{
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < num_elems) {
+        w[row*inc_w] = v[row*inc_v];
+    }
+}
+
+template __global__ void copy_1d_kernel(magma_int_t num_elems, double* v, magma_int_t inc_v, double* w, magma_int_t inc_w);
+
+template __global__ void copy_1d_kernel(magma_int_t num_elems, float* v, magma_int_t inc_v, float* w, magma_int_t inc_w);
+
+template __global__ void copy_1d_kernel(magma_int_t num_elems, __half* v, magma_int_t inc_v, __half* w, magma_int_t inc_w);
+
+__global__ void axpy_1d_kernel(magma_int_t num_rows, __half beta, __half* v, magma_int_t inc_v, __half* w,
+                               magma_int_t inc_w) {
+    auto row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < num_rows) {
+        w[row*inc_w] += beta*v[row*inc_v];
+    }
+}
+
+
+
+template <typename value_type, typename index_type>
 __global__ void set_eye_2d_kernel(index_type num_rows, index_type num_cols, value_type* values, index_type ld)
 {
     auto col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -205,4 +230,22 @@ template void set_upper_triang(dim2 size, float* values, magma_int_t ld);
 template void set_upper_triang(dim2 size, __half* values, magma_int_t ld);
 
 }  // namespace cuda
+
+namespace blas {
+
+void axpy(magma_int_t num_rows, __half beta, __half* v, magma_int_t inc_v, __half* w, magma_int_t inc_w, magma_queue_t queue) {
+    cuda::axpy_1d_kernel<<<num_rows/CUDA_MAX_NUM_THREADS_PER_BLOCK + 1,
+        CUDA_MAX_NUM_THREADS_PER_BLOCK>>>(num_rows, beta, v, inc_v, w, inc_w);
+    cudaDeviceSynchronize();
+}
+
+void copy(magma_int_t num_elems, __half* v, magma_int_t inc_v, __half* w, magma_int_t inc_w, magma_queue_t queue)
+{
+    cuda::copy_1d_kernel<<<num_elems/CUDA_MAX_NUM_THREADS_PER_BLOCK + 1,
+        CUDA_MAX_NUM_THREADS_PER_BLOCK>>>(num_elems, v, inc_v, w, inc_w);
+    cudaDeviceSynchronize();
+}
+
+
+}  //
 }  // namespace rls

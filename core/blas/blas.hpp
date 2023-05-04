@@ -22,6 +22,10 @@ void copy(magma_int_t num_rows, double* source_vector, magma_int_t inc,
 void copy(magma_int_t num_rows, float* source_vector, magma_int_t inc_u,
           float* dest_vector, magma_int_t inc_v, magma_queue_t queue);
 
+void axpy(magma_int_t num_rows, __half beta, __half* v, magma_int_t inc_v, __half* w, magma_int_t inc_w, magma_queue_t queue);
+
+void copy(magma_int_t num_elems, __half* v, magma_int_t inc_v, __half* w, magma_int_t inc_w, magma_queue_t queue);
+
 void scale(magma_int_t num_rows, double alpha, double* v_vector,
            magma_int_t inc, magma_queue_t queue);
 

@@ -103,7 +103,6 @@ void initialize(
     auto v = vectors->v_basis;
     blas::copy(global_length, vectors->residual, vectors->inc, v, vectors->inc,
                queue);
-
     blas::scale(global_length, 1.0 / scalars->beta, v, vectors->inc, queue);
 }
 
@@ -131,6 +130,7 @@ void step_1(std::shared_ptr<Context<device_type>> context, dim2 size, matrix::De
         value_type_in* mtx_in = vectors->mtx_in;
         rls::utils::convert(context, global_len, 1, z, global_len, z_in, global_len);
         rls::utils::convert(context, global_len, 1, w, global_len, w_in, global_len);
+        // fix precisions issues
         fgmres::gemv(MagmaNoTrans, size[0], size[1], one, mtx_in,
                      size[0], z_in, 1, zero, w_in, 1, temp_in, queue);
         rls::utils::convert(context, global_len, 1, w_in, global_len, w, global_len);
@@ -255,6 +255,7 @@ void run_fgmres(
                                           max_iter, tolerance, iter, resnorm,
                                           queue))
         {
+
             break;
         }
         blas::scale(global_length, 1.0 / scalars->h,
@@ -295,6 +296,25 @@ template void run_fgmres(
     magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
     magma_queue_t queue, double* t_solve);
 
+template void run_fgmres(
+    matrix::Dense<float, CUDA>* mtx, matrix::Dense<float, CUDA>* rhs,
+    matrix::Dense<float, CUDA>* sol,
+    preconditioner::preconditioner<float, magma_int_t, CUDA>*
+        precond,
+    fgmres::temp_scalars<float, magma_int_t>* scalars,
+    fgmres::temp_vectors<__half, float, magma_int_t, CUDA>* vectors,
+    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+    magma_queue_t queue, double* t_solve);
+
+template void run_fgmres(
+    matrix::Dense<double, CUDA>* mtx, matrix::Dense<double, CUDA>* rhs,
+    matrix::Dense<double, CUDA>* sol,
+    preconditioner::preconditioner<double, magma_int_t, CUDA>*
+        precond,
+    fgmres::temp_scalars<double, magma_int_t>* scalars,
+    fgmres::temp_vectors<__half, double, magma_int_t, CUDA>* vectors,
+    magma_int_t max_iter, double tolerance, magma_int_t* iter, double* resnorm,
+    magma_queue_t queue, double* t_solve);
 
 }  // namespace solver
 }  // namespace rls

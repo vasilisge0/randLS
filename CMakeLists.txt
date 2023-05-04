@@ -10,6 +10,7 @@ add_library(mix_n_pick SHARED
             core/solver/solver.cpp
             cuda/solver/lsqr_kernels.cu
             cuda/preconditioner/preconditioner_kernels.cu
+            cuda/sketch/countsketch.cu
             utils/init_kernels.cpp
             core/dense/dense.cpp
             core/blas/blas.cpp

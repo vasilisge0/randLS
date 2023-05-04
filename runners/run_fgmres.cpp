@@ -106,15 +106,15 @@ int main(int argc, char* argv[]) {
         {
             data_type_precond = FP64;
             // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
+            context->enable_tf32_flag();
             precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx);
+            context->disable_tf32_flag();
             break;
         }
         case 3:
         {
             data_type_precond = FP64;
-            context->enable_tf32_flag();
             precond = rls::preconditioner::GeneralizedSplit<__half, double, magma_int_t>::create(context, mtx);
-            context->disable_tf32_flag();
             break;  
         }
         case 4:
@@ -153,7 +153,6 @@ int main(int argc, char* argv[]) {
         }
         case 1:
         {
-            std::cout << "32/64 execution solver\n";
             data_type_solver = FP64;
             solver = rls::solver::Fgmres<float, double, magma_int_t, rls::CUDA>::create(precond.get(), mtx, rhs, tol);
             break;
@@ -161,13 +160,15 @@ int main(int argc, char* argv[]) {
         case 2:
         {
             data_type_solver = FP64;
-            // solver = rls::solver::lsqr<float, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            context->enable_tf32_flag();
+            solver = rls::solver::Fgmres<float, double, magma_int_t, rls::CUDA>::create(precond.get(), mtx, rhs, tol);
+            context->disable_tf32_flag();
             break;
         }
         case 3:
         {
             data_type_solver = FP64;
-            // solver = rls::solver::lsqr<__half, double, magma_int_t>::create(precond.get(), mtx, rhs, tol);
+            solver = rls::solver::Fgmres<__half, double, magma_int_t, rls::CUDA>::create(precond.get(), mtx, rhs, tol);
             break;  
         }
         case 4:

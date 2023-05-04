@@ -26,6 +26,9 @@ template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_ro
              float* values_out, magma_int_t ld_out);
 
 template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, double* values_in, magma_int_t ld_in,
+             __half* values_out, magma_int_t ld_out);
+
+template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, double* values_in, magma_int_t ld_in,
              double* values_out, magma_int_t ld_out);
 
 template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, float* values_in, magma_int_t ld_in,
@@ -33,6 +36,15 @@ template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_ro
 
 template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, float* values_in, magma_int_t ld_in,
              double* values_out, magma_int_t ld_out);
+
+template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, __half* values_in, magma_int_t ld_in,
+             double* values_out, magma_int_t ld_out);
+
+template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, __half* values_in, magma_int_t ld_in,
+             float* values_out, magma_int_t ld_out);
+
+template void convert(std::shared_ptr<Context<CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, float* values_in, magma_int_t ld_in,
+             __half* values_out, magma_int_t ld_out);
 
 }
 }

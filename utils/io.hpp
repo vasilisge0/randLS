@@ -8,6 +8,7 @@
 #include "magma_lapack.h"
 #include "magma_v2.h"
 #include "base_types.hpp"
+#include "../core/memory/magma_context.hpp"
 
 
 namespace rls {

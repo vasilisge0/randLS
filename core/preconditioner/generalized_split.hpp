@@ -8,6 +8,7 @@
 
 
 #include "../../cuda/preconditioner/preconditioner_kernels.cuh"
+#include "../../cuda/solver/lsqr_kernels.cuh"
 #include "../../utils/io.hpp"
 #include "../blas/blas.hpp"
 #include "../dense/dense.hpp"
@@ -19,12 +20,12 @@ namespace rls {
 namespace preconditioner {
 namespace generalized_split {
 
-template <typename value_type_internal, typename value_type,
+template <typename value_type_in, typename value_type,
           typename index_type>
 struct state {
-    value_type_internal* dmtx_rp = nullptr;
-    value_type_internal* dsketch_rp = nullptr;
-    value_type_internal* dresult_rp = nullptr;
+    value_type_in* dmtx_rp = nullptr;
+    value_type_in* dsketch_rp = nullptr;
+    value_type_in* dresult_rp = nullptr;
     value_type* tau = nullptr;
 
     void allocate(index_type ld_mtx, index_type num_cols_mtx,
@@ -48,14 +49,14 @@ struct state {
 
 }  // namespace generalized_split
 
-template <typename value_type_internal, typename value_type,
+template <typename value_type_in, typename value_type,
           typename index_type, ContextType device_type=CUDA>
 void compute_precond(index_type num_rows_sketch, index_type num_cols_sketch,
                   value_type* dsketch, index_type ld_sketch,
                   index_type num_rows_mtx, index_type num_cols_mtx,
                   value_type* dmtx, index_type ld_mtx, value_type* dr_factor,
                   index_type ld_r_factor,
-                  generalized_split::state<value_type_internal, value_type,
+                  generalized_split::state<value_type_in, value_type,
                                            index_type>* precond_state,
                   std::shared_ptr<Context<device_type>> context, double* runtime,
                   double* t_mm, double* t_qr);
@@ -195,8 +196,8 @@ public:
     }
 
     template<typename value_type_out>
-    std::shared_ptr<GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>> convert_to() {
-        std::shared_ptr<GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>> tmp = GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>::create();
+    std::shared_ptr<GeneralizedSplit<value_type_out, value_type_out, index_type, device_type>> convert_to() {
+        std::shared_ptr<GeneralizedSplit<value_type_out, value_type_out, index_type, device_type>> tmp = GeneralizedSplit<value_type_in, value_type_out, index_type, device_type>::create();
         tmp->mtx_->copy_from(this->mtx_);
         tmp->precond_mtx_->copy_from(this->precond_mtx_);
         return tmp;

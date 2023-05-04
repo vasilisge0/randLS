@@ -22,6 +22,84 @@ namespace fgmres {
 
 // Vectors used by Fgmres method.
 template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
+struct workspace {
+    std::shared_ptr<Context<device_type>> context_;
+    // Ccalars.
+    index_type inc = 1;
+    index_type max_iter_;
+    // Vectors and matrices.
+    value_type* u;
+    value_type* v_basis;
+    value_type* w;
+    value_type* temp;
+    value_type* residual;
+    value_type_in* w_in;
+    value_type_in* v_in;
+    value_type_in* z_in;
+    value_type_in* temp_in;
+    value_type_in* mtx_in;
+    value_type* hessenberg_mtx;
+    value_type* hessenberg_mtx_gpu;
+    value_type* hessenberg_rhs_gpu;
+    value_type* z_basis;
+    value_type* hessenberg_rhs;
+    std::shared_ptr<std::vector<std::pair<value_type, value_type>>>
+        givens_cache;
+    std::shared_ptr<matrix::Dense<value_type, CPU>> tmp_cpu;
+
+    workspace(std::shared_ptr<Context<device_type>> context, dim2 size, int max_iter, magma_queue_t& queue)
+    {
+        std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create();
+        context_ = context;
+        max_iter_ = size[1];
+        auto global_len = size[0] + size[1];
+        memory::malloc(&u, global_len);
+        memory::malloc(&v_basis, global_len * (max_iter_ + 1));
+        memory::malloc(&z_basis, global_len * (max_iter_ + 1));
+        memory::malloc(&w, global_len);
+        memory::malloc(&temp, global_len);
+        memory::malloc(&hessenberg_mtx_gpu, max_iter_ * (max_iter_ + 1));
+        memory::malloc(&hessenberg_rhs_gpu, (max_iter_ + 1));
+        memory::malloc_cpu(&hessenberg_mtx, max_iter_ * (max_iter_ + 1));
+        memory::malloc_cpu(&hessenberg_rhs, max_iter_ + 1);
+        memory::malloc(&residual, global_len);
+        if (!std::is_same<value_type_in, value_type>::value) {
+            memory::malloc(&w_in, global_len);
+            memory::malloc(&v_in, global_len);
+            memory::malloc(&z_in, global_len);
+            memory::malloc(&temp_in, global_len);
+            memory::malloc(&mtx_in, global_len * size[1]);
+        }
+
+        givens_cache = std::shared_ptr<std::vector<std::pair<value_type, value_type>>>(new std::vector<std::pair<value_type, value_type>>);
+        givens_cache->resize(static_cast<size_t>(max_iter_ + 1));
+        tmp_cpu = matrix::Dense<value_type, CPU>::create(context_cpu, {max_iter_ + 1, 1});
+    }
+
+    ~workspace()
+    {
+        // memory::free(u);
+        // memory::free(v_basis);
+        // memory::free(z_basis);
+        // memory::free(w);
+        // memory::free(temp);
+        // memory::free(hessenberg_mtx_gpu);
+        // memory::free(hessenberg_rhs_gpu);
+        // memory::free_cpu(hessenberg_mtx);
+        // memory::free_cpu(hessenberg_rhs);
+        // memory::free(residual);
+        // if (!std::is_same<value_type_in, value_type>::value) {
+            // memory::free(w_in);
+            // memory::free(v_in);
+            // memory::free(z_in);
+            // memory::free(mtx_in);
+            // memory::free(temp_in);
+        // }
+    }
+};
+
+// Vectors used by Fgmres method.
+template <typename value_type_in, typename value_type, typename index_type, ContextType device_type>
 struct temp_vectors {
     std::shared_ptr<Context<device_type>> context_;
     index_type max_iter_;
@@ -188,9 +266,6 @@ public:
         use_precond_ = true;
         auto num_rows = this->mtx_->get_size()[0];
         auto num_cols = this->mtx_->get_size()[1];
-        std::cout << "this->mtx_->get_size()[0]: " << this->mtx_->get_size()[0] << ", this->mtx_->get_size()[1]: " << this->mtx_->get_size()[1] << '\n';
-        std::cout << "mtx->get_size()[0]: " << mtx->get_size()[0] << ", mtx->get_size()[1]: " << mtx->get_size()[1] << '\n';
-        std::cout << "rhs->get_size()[0]: " << rhs->get_size()[0] << ", rhs->get_size()[1]: " << rhs->get_size()[1] << '\n';
     }
 
     // Create method (1) of Fgmres solver
@@ -244,7 +319,6 @@ public:
     void generate()
     {
         auto queue = this->context_->get_queue();
-
         // generates rhs and solution vectors
         auto num_rows = this->mtx_->get_size()[0];
         auto num_cols = this->mtx_->get_size()[1];
@@ -272,17 +346,16 @@ public:
                 this->context_, mtx_->get_size(), this->max_iter_, queue));
 
         // Converts matrix to reduced precision.
-        utils::convert(this->context_,
-            mtx_->get_size()[0],
-            mtx_->get_size()[1],
+        utils::convert(this->context_, mtx_->get_size()[0], mtx_->get_size()[1],
             this->mtx_->get_values(), mtx_->get_ld(), vectors_->mtx_in,
             this->mtx_->get_ld());
-
-        dim2 h_size = {this->max_iter_ + 1, 1};
+        
         if (use_precond_) {
             precond_->generate();
             precond_->compute();
         }
+
+        // auto tmp = std::move(precond_);
     }
 
 private:
@@ -299,6 +372,7 @@ private:
         vectors_;
     fgmres::temp_scalars<value_type, index_type> scalars_;
     preconditioner::generic_preconditioner<device_type>* precond_;
+    preconditioner::generic_preconditioner<device_type>* precond_in_;
     std::shared_ptr<matrix::Dense<value_type, device_type>> mtx_;
     std::shared_ptr<matrix::Dense<value_type, device_type>> dmtx_;
     std::shared_ptr<matrix::Dense<value_type, device_type>> rhs_;
