@@ -88,18 +88,21 @@ int main(int argc, char* argv[]) {
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
     std::cout << "precond_prec_type: " << precond_prec_type << '\n';
+    rls::preconditioner::logger precond_logger;
+    precond_logger.warmup_runs_ = warmup_iters;
+    precond_logger.runs_ = runtime_iters;
     switch (precond_prec_type) {
         case 0:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::GeneralizedSplit<double, double, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<double, double, magma_int_t>::create(mtx, sampling_coeff);
             break;
         }
         case 1:
         {
             data_type_precond = FP64;
             // precond = rls::preconditioner::gaussian<float, double, magma_int_t>::create(mtx);
-            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx, sampling_coeff);
             break;
         }
         case 2:
@@ -107,14 +110,14 @@ int main(int argc, char* argv[]) {
             data_type_precond = FP64;
             // precond = rls::preconditioner::gaussian<float, float, magma_int_t>::create(mtx);
             context->enable_tf32_flag();
-            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx);
+            precond = rls::preconditioner::GeneralizedSplit<float, double, magma_int_t>::create(mtx, sampling_coeff);
             context->disable_tf32_flag();
             break;
         }
         case 3:
         {
             data_type_precond = FP64;
-            precond = rls::preconditioner::GeneralizedSplit<__half, double, magma_int_t>::create(context, mtx);
+            precond = rls::preconditioner::GeneralizedSplit<__half, double, magma_int_t>::create(mtx, sampling_coeff);
             break;  
         }
         case 4:
@@ -204,5 +207,16 @@ int main(int argc, char* argv[]) {
 
     solver->generate();
     solver->run();
+
+    std::cout << "precond->runtime_: " << precond->get_runtime() << "\n";
+    std::cout << " solver->runtime_: " << solver->get_runtime() << "\n";
+    std::cout << "    solver->iter_: " << solver->get_iterations_completed() << "\n";
+    std::cout << "  solver->resnorm: " << solver->get_resnorm() << '\n';
+
+    rls::io::write_output(input_outfile.c_str(), mtx->get_size()[0], mtx->get_size()[1], solver->get_max_iter(),
+        sampling_coeff, std::ceil(sampling_coeff * mtx->get_size()[1]), precond->get_runtime(),
+        solver->get_runtime(), precond->get_runtime() + solver->get_runtime(),
+        solver->get_iterations_completed(), solver->get_resnorm());
+
     return 0;
 }

@@ -102,6 +102,8 @@ public:
         // experimental
         this->temp_ = matrix::Dense<value_type, device_type>::create(context, {size[1], 1});
         this->temp_mtx_ = matrix::Dense<value_type, device_type>::create(context, {size[1], size[1]});
+        this->t = matrix::Dense<value_type, device_type>::create(this->context_,
+                    {size[1], 1});
     }
 
     static std::unique_ptr<
@@ -121,6 +123,17 @@ public:
         return std::unique_ptr<
             GeneralizedSplit<value_type_in, value_type, index_type>>(
             new GeneralizedSplit<value_type_in, value_type, index_type>(mtx));
+    }
+
+    static std::unique_ptr<
+        GeneralizedSplit<value_type_in, value_type, index_type>>
+    create(std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+        double sampling_coeff)
+    {
+        return std::unique_ptr<
+            GeneralizedSplit<value_type_in, value_type, index_type>>(
+            new GeneralizedSplit<value_type_in, value_type, index_type>(mtx,
+                sampling_coeff));
     }
 
     static std::unique_ptr<
@@ -172,14 +185,33 @@ public:
         precond_state->allocate(this->mtx_->get_size()[0], this->mtx_->get_size()[1],
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
             sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[0]);
-        
-        compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
-            sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
-            this->mtx_->get_size()[0], this->mtx_->get_size()[1],
-            this->mtx_->get_values(), this->mtx_->get_size()[0],
-            this->precond_mtx_->get_values(), this->precond_mtx_->get_size()[0],
-            precond_state,
-            this->context_, &runtime_local, &t_mm, &t_qr);
+
+        for (auto i = 0; i < this->logger_.warmup_runs_; i++) {
+            compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
+                sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
+                this->mtx_->get_size()[0], this->mtx_->get_size()[1],
+                this->mtx_->get_values(), this->mtx_->get_size()[0],
+                this->precond_mtx_->get_values(), this->precond_mtx_->get_size()[0],
+                precond_state,
+                this->context_, &this->logger_.runtime_, &this->logger_.runtime_sketch_, &this->logger_.runtime_qr_);
+        }
+        this->logger_.runtime_ = 0.0;
+        this->logger_.runtime_sketch_ = 0.0;
+        this->logger_.runtime_qr_ = 0.0;
+
+        for (auto i = 0; i < this->logger_.runs_; i++) {
+            compute_precond(sketch_mtx_->get_size()[0], sketch_mtx_->get_size()[1],
+                sketch_mtx_->get_values(), sketch_mtx_->get_size()[0],
+                this->mtx_->get_size()[0], this->mtx_->get_size()[1],
+                this->mtx_->get_values(), this->mtx_->get_size()[0],
+                this->precond_mtx_->get_values(), this->precond_mtx_->get_size()[0],
+                precond_state,
+                this->context_, &this->logger_.runtime_, &this->logger_.runtime_sketch_, &this->logger_.runtime_qr_);
+        }
+        this->logger_.runtime_ = this->logger_.runtime_ / this->logger_.runs_;
+        this->logger_.runtime_sketch_ = this->logger_.runtime_sketch_ / this->logger_.runs_;
+        this->logger_.runtime_qr_ = this->logger_.runtime_qr_ / this->logger_.runs_;
+
         precond_state->free();
 
         magma_int_t status;
@@ -201,6 +233,10 @@ public:
         tmp->mtx_->copy_from(this->mtx_);
         tmp->precond_mtx_->copy_from(this->precond_mtx_);
         return tmp;
+    }
+
+    void set_logger(logger& logger) {
+        this->logger_ = logger;
     }
 
     matrix::Dense<value_type, device_type>* get_mtx() { return this->precond_mtx_.get(); }
@@ -235,6 +271,15 @@ private:
         this->mtx_ = mtx;
     }
 
+    GeneralizedSplit(std::shared_ptr<matrix::Dense<value_type, device_type>> mtx,
+        double sampling_coeff)
+    {
+        this->context_ = mtx->get_context();
+        this->precond_type_ = GENERALIZED_SPLIT;
+        this->sampling_coeff_ = sampling_coeff;
+        this->mtx_ = mtx;
+    }
+
     GeneralizedSplit(matrix::Dense<value_type, device_type>& mtx, matrix::Dense<value_type, device_type>& sketch_mtx)
     {
         this->context_ = mtx->get_context();
@@ -249,6 +294,7 @@ private:
     std::unique_ptr<matrix::Dense<value_type, device_type>> dt_;
     std::unique_ptr<matrix::Dense<value_type, device_type>> temp_;
     std::unique_ptr<matrix::Dense<value_type, device_type>> temp_mtx_;
+    std::unique_ptr<matrix::Dense<value_type, device_type>> t;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> mtx_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dsketch_rp_;
     std::unique_ptr<matrix::Dense<value_type_in, device_type>> dresult_rp_;

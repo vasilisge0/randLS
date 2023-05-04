@@ -201,7 +201,7 @@ void write_mtx(char* filename, magma_int_t num_rows, magma_int_t num_cols, float
     magma_free_cpu(t);
 }
 
-void write_output(char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t max_iter,
+void write_output(const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t max_iter,
     double sampling_coeff, magma_int_t sampled_rows, double t_precond, double t_solve, double t_total,
     magma_int_t iter, double relres) {
     FILE* file_handle = fopen(filename, "w");

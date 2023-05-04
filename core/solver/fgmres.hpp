@@ -308,8 +308,8 @@ public:
         if (use_precond_) {
             run_fgmres(mtx_.get(), glb_rhs_.get(), glb_sol_.get(),
                 static_cast<preconditioner::preconditioner<value_type, index_type, device_type>*>(precond_), &scalars_, vectors_.get(),
-                this->get_max_iter(), this->get_tolerance(), &iter_, &resnorm_,
-                this->context_->get_queue(), &t_solve_);
+                this->get_max_iter(), this->get_tolerance(), &this->iter_, &this->resnorm_,
+                this->context_->get_queue(), &this->runtime_);
         } else {
             // Run non-preconditioned FGMRES.
         }
@@ -365,9 +365,6 @@ private:
     void free_vectors();
 
     bool use_precond_ = false;
-    magma_int_t iter_;
-    double resnorm_;
-    double t_solve_;
     std::shared_ptr<fgmres::temp_vectors<value_type_in, value_type, index_type, device_type>>
         vectors_;
     fgmres::temp_scalars<value_type, index_type> scalars_;

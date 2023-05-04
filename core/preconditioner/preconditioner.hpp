@@ -33,6 +33,14 @@ enum PrecondType {
     GENERALIZED_SPLIT
 };
 
+struct logger {
+    magma_int_t runs_ = 1;
+    magma_int_t warmup_runs_ = 0;
+    double runtime_ = 0.0;
+    double runtime_sketch_ = 0.0;
+    double runtime_qr_ = 0.0;
+};
+
 
 template<ContextType device_type=CUDA>
 class generic_preconditioner {
@@ -40,6 +48,7 @@ class generic_preconditioner {
         std::shared_ptr<Context<device_type>> context_;
         PrecondValueType type_selection_ = Undefined_PrecondValueType;
         PrecondType type_;
+        logger logger_;
 
     public:
         generic_preconditioner() { }
@@ -49,6 +58,10 @@ class generic_preconditioner {
         virtual void generate() {}
 
         virtual void compute() = 0;
+
+        double get_runtime() {
+            return logger_.runtime_;
+        }
 };
 
 

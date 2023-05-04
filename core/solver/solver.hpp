@@ -65,6 +65,12 @@ public:
 
     double get_tolerance() { return tolerance_; }
 
+    double get_runtime() { return runtime_; }
+
+    double get_resnorm() { return resnorm_; }
+
+    magma_int_t get_iterations_completed() { return iter_; }
+
     magma_int_t get_max_iter() { return max_iter_; }
 
     std::shared_ptr<Context<device_type>> get_context() { return context_; }
@@ -76,6 +82,9 @@ protected:
     bool use_precond_ = false;
     SolverValueType combined_value_type_;
     SolverType type_;
+    magma_int_t iter_ = 0;
+    double resnorm_ = 1.0;
+    double runtime_ = 0.0;
 };
 
 // class solver : public AbstractSolver {
