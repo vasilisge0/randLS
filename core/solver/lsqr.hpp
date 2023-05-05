@@ -258,6 +258,10 @@ public:
         }
     }
 
+    void run_with_logger() {
+
+    }
+
 private:
     void allocate_vectors(dim2 size);
     void free_vectors();

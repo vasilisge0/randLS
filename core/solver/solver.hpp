@@ -42,19 +42,12 @@ public:
 
     virtual void run() = 0;
 
+    virtual void run_with_logger() = 0;
+
     double get_tolerance() { return tolerance_; }
 
     magma_int_t get_max_iter() { return max_iter_; }
 };
-
-// class solver : public AbstractSolver {
-// public:
-    // ~solver() { }
-// 
-    // virtual void generate(std::string& filename_mtx, std::string& filename_rhs);
-// 
-    // virtual void run();
-// };
 
 struct logger {
     magma_int_t runs_ = 1;
@@ -68,6 +61,8 @@ public:
     virtual void generate() = 0;
 
     virtual void run() = 0;
+
+    virtual void run_with_logger() = 0;
 
     double get_tolerance() { return tolerance_; }
 

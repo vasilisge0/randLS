@@ -53,6 +53,11 @@ public:
         }
     }
 
+    void run_with_logger()
+    {
+
+    }
+
 private:
     std::shared_ptr<generic_solver<device_type>> solver_;
     index_type restarts_;

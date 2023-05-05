@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
     // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
-    std::cout << "precond_prec_type: " << precond_prec_type << '\n';
     rls::preconditioner::logger precond_logger;
     precond_logger.warmup_runs_ = warmup_iters;
     precond_logger.runs_ = runtime_iters;
@@ -203,11 +202,6 @@ int main(int argc, char* argv[]) {
             break;
     }
     solver->set_logger(solver_logger);
-
-    // Exit if the "outer" precision in both the preconditioner and the solver are different.
-    // if (data_type_solver != data_type_precond) {
-    //    return 0;
-    // }
 
     solver->generate();
     solver->run();
