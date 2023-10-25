@@ -800,6 +800,19 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
         blas::axpy(context, num_cols, minus_one, workspace->noisy_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
         auto noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/true_sol_norm;
         logger->set_noisy_error_history(workspace->completed_iterations, noisy_error);  // @error
+        auto t0 = blas::norm2(context, num_cols, workspace->true_sol_->get_values(), 1);
+        auto t1 = blas::norm2(context, num_cols, workspace->noisy_sol_->get_values(), 1);
+        auto t2 = blas::norm2(context, num_cols, sol->get_values(), 1);
+        auto similarity_t = blas::dot(context, num_cols, workspace->true_sol_->get_values(), 1,
+           sol->get_values(), 1);
+        similarity_t = similarity_t / (t0*t2);
+        auto similarity_n = blas::dot(context, num_cols, sol->get_values(), 1,
+           workspace->noisy_sol_->get_values(), 1);
+        similarity_n = similarity_n / (t2*t1);
+        //std::cout << workspace->completed_iterations << " / ";
+        //std::cout << std::setprecision(15) << similarity_t << ", ";
+        //std::cout << std::setprecision(15) << similarity_n << '\n';
+        logger->set_similarity_history(workspace->completed_iterations, similarity_t, similarity_n);
     }
     else if (logger->record_noisy_error()) {
         blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);

@@ -31,10 +31,13 @@ private:
     std::string filename_stagnation_history_;
     std::string filename_true_sol_;
     std::string filename_noisy_sol_;
+    std::string filename_true_sol_similarity_history_;
+    std::string filename_noisy_sol_similarity_history_;
     bool record_relres_history_ = true;
     bool record_true_error_history_ = true;
     bool record_noisy_error_history_ = true;
     bool record_stagnation_history_ = true;
+    bool record_sol_similarity_history_ = true;
 
 public:
     void set_tolerance(double tolerance)
@@ -143,6 +146,13 @@ public:
         filename_stagnation_history_ = s;
     }
 
+    void set_filename_similarity(std::string& s0, std::string& s1)
+    {
+        record_sol_similarity_history_ = true;
+        filename_true_sol_similarity_history_ = s0;
+        filename_noisy_sol_similarity_history_ = s1;
+    }
+
     std::string& get_filename_relres()
     {
         return filename_relres_history_;
@@ -173,6 +183,15 @@ public:
         return filename_stagnation_history_;
     }
 
+    std::string& get_filename_true_sol_similarity()
+    {
+        return filename_true_sol_similarity_history_;
+    }
+
+    std::string& get_filename_noisy_sol_similarity()
+    {
+        return filename_noisy_sol_similarity_history_;
+    }
 
     bool record_relres()
     {
@@ -189,10 +208,14 @@ public:
         return record_noisy_error_history_;
     }
 
-
     bool record_stagnation()
     {
         return record_stagnation_history_;
+    }
+
+    bool record_sol_similarity()
+    {
+        return record_sol_similarity_history_;
     }
 
 private:
@@ -228,6 +251,15 @@ public:
                 noisy_error_history_->get_values());
         }
 
+        if ((record_true_error_history_) && (record_noisy_error_history_) && (record_sol_similarity_history_)) {
+            auto str0 = filename_true_sol_similarity_history_.c_str();
+            io::write_mtx(str0, completed_iterations_ + 1, 1,
+                true_sol_similarity_history_->get_values());
+
+            auto str1 = filename_noisy_sol_similarity_history_.c_str();
+            io::write_mtx(str1, completed_iterations_ + 1, 1,
+                noisy_sol_similarity_history_->get_values());
+        }
     }
 
     static std::unique_ptr<Logger> create(Config* config)
@@ -274,6 +306,12 @@ public:
         stagnation_history_->get_values()[position] = val;
     }
 
+    void set_similarity_history(int position, double val0, double val1)
+    {
+        true_sol_similarity_history_->get_values()[position] = val0;
+        noisy_sol_similarity_history_->get_values()[position] = val1;
+    }
+
     std::string& get_filename_relres()
     {
         return filename_relres_history_;
@@ -313,6 +351,7 @@ private:
         record_true_error_history_ = config->record_true_error();
         record_noisy_error_history_ = config->record_noisy_error();
         record_stagnation_history_ = config->record_stagnation();
+        record_sol_similarity_history_ = config->record_sol_similarity();
         auto context_cpu = rls::share(rls::Context<rls::CPU>::create());
         if (record_relres_history_) {
             filename_relres_history_ = config->get_filename_relres();
@@ -332,6 +371,12 @@ private:
             filename_noisy_sol_ = config->get_filename_noisy_sol();
             noisy_error_history_ = rls::matrix::Dense<rls::CPU, double>::create(context_cpu, dim2(total_iterations_, 1));
         }
+        if ((record_true_error_history_) && (record_noisy_error_history_)) {
+            filename_true_sol_similarity_history_ = config->get_filename_true_sol_similarity();
+            filename_noisy_sol_similarity_history_ = config->get_filename_noisy_sol_similarity();
+            true_sol_similarity_history_ = rls::matrix::Dense<rls::CPU, double>::create(context_cpu, dim2(total_iterations_, 1));
+            noisy_sol_similarity_history_ = rls::matrix::Dense<rls::CPU, double>::create(context_cpu, dim2(total_iterations_, 1));
+        }
     }
 
     magma_int_t total_iterations_     = 0;
@@ -348,8 +393,11 @@ private:
     bool measure_runtime_             = false;
     bool new_restart_active           = false;
     bool record_true_error_ = false;
+    bool record_sol_similarity_history_;
     std::string filename_relres_history_;
     std::string filename_true_error_history_;
+    std::string filename_true_sol_similarity_history_;
+    std::string filename_noisy_sol_similarity_history_;
     std::string filename_noisy_error_history_;
     std::string filename_stagnation_history_;
     std::string filename_true_sol_;
@@ -362,6 +410,8 @@ private:
     std::shared_ptr<matrix::Dense<rls::CPU, double>> true_error_history_;
     std::shared_ptr<matrix::Dense<rls::CPU, double>> noisy_error_history_;
     std::shared_ptr<matrix::Dense<rls::CPU, double>> stagnation_history_;
+    std::shared_ptr<matrix::Dense<rls::CPU, double>> true_sol_similarity_history_;
+    std::shared_ptr<matrix::Dense<rls::CPU, double>> noisy_sol_similarity_history_;
 };
 
 }

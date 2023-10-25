@@ -76,7 +76,7 @@ size_t Sparse<device_type, value_type, index_type>::get_nnz()
 template <ContextType device_type, typename value_type, typename index_type>
 std::shared_ptr<Context<device_type>> Sparse<device_type, value_type, index_type>::get_context()
 {
-    return MtxOp<device_type>::get_context();
+    return Mtx<device_type>::get_context();
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
@@ -134,7 +134,7 @@ template<> magma_int_t* Sparse<rls::CUDA, __half, magma_int_t>::get_col_idxs()
 //}
 
 //template <ContextType device_type, typename value_type, typename index_type>
-//Sparse<device_type, value_type>& Sparse<device_type, value_type>:copy_from(std::shared_ptr<MtxOp<device_type>> mtx)
+//Sparse<device_type, value_type>& Sparse<device_type, value_type>:copy_from(std::shared_ptr<Mtx<device_type>> mtx)
 //{
 //
 //}
@@ -296,7 +296,7 @@ std::cout << "\n\nIN TO DENSE\n\n";
 
 template<ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, dim2 size, size_t nnz,
-       value_type* values, index_type* row_ptrs, index_type* col_idxs) : MtxOp<device_type>(context)
+       value_type* values, index_type* row_ptrs, index_type* col_idxs) : Mtx<device_type>(context)
 {
     nnz_ = nnz;
     size_ = size;
@@ -313,7 +313,7 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
 
 template<>
 Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size, size_t nnz,
-       __half* values, magma_int_t* row_ptrs, magma_int_t* col_idxs) : MtxOp<rls::CUDA>(context)
+       __half* values, magma_int_t* row_ptrs, magma_int_t* col_idxs) : Mtx<rls::CUDA>(context)
 {
     nnz_ = nnz;
     size_ = size;
@@ -323,7 +323,7 @@ Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, dim2 size, size_t nnz) : MtxOp<device_type>(context)
+Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, dim2 size, size_t nnz) : Mtx<device_type>(context)
 {
     auto exec = context->get_executor();
     gko::dim<2> s = {static_cast<int>(size[0]), static_cast<int>(size[1])};
@@ -338,7 +338,7 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
 }
 
 // create
-template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size, size_t nnz) : MtxOp<rls::CUDA>(context)
+template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size, size_t nnz) : Mtx<rls::CUDA>(context)
 {
     auto exec = context->get_executor();
     gko::dim<2> s = {static_cast<int>(size[0]), static_cast<int>(size[1])};
@@ -353,7 +353,7 @@ template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Contex
 
 template<ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context,
-    std::string& filename_mtx) : MtxOp<device_type>(context)
+    std::string& filename_mtx) : Mtx<device_type>(context)
 {
     using matrix = gko::matrix::Csr<value_type, index_type>;
     auto exec = context->get_executor();
@@ -371,7 +371,7 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
 }
 
 template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context,
-    std::string& filename_mtx) : MtxOp<rls::CUDA>(context)
+    std::string& filename_mtx) : Mtx<rls::CUDA>(context)
 {
     //using matrix = gko::matrix::Csr<value_type, index_type>;
     auto exec = context->get_executor();
@@ -385,7 +385,7 @@ template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Contex
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, std::shared_ptr<gko::LinOp> mtx) : MtxOp<device_type>(context)
+Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, std::shared_ptr<gko::LinOp> mtx) : Mtx<device_type>(context)
 {
     this->mtx_ = std::shared_ptr<gko::LinOp>(mtx);
     auto exec = context->get_executor();
@@ -399,7 +399,7 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
 }
 
 // @to_impl_later
-template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, std::shared_ptr<gko::LinOp> mtx) : MtxOp<rls::CUDA>(context)
+template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, std::shared_ptr<gko::LinOp> mtx) : Mtx<rls::CUDA>(context)
 {
     //this->mtx_ = std::shared_ptr<gko::LinOp>(mtx);
     auto exec = context->get_executor();
@@ -408,7 +408,7 @@ template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Contex
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, dim2 size) : MtxOp<device_type>(context)
+Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, dim2 size) : Mtx<device_type>(context)
 {
     auto exec = context->get_executor();
     gko::dim<2> s = {static_cast<int>(size[0]), static_cast<int>(size[1])};
@@ -422,7 +422,7 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
 }
 
 //ok
-template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size) : MtxOp<rls::CUDA>(context)
+template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size) : Mtx<rls::CUDA>(context)
 {
     auto exec = context->get_executor();
     gko::dim<2> s = {static_cast<int>(size[0]), static_cast<int>(size[1])};
@@ -517,7 +517,7 @@ std::unique_ptr<Sparse<device_type, value_type, index_type>> Sparse<device_type,
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_type, index_type>&& t) : MtxOp<device_type>(t.get_context())
+Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_type, index_type>&& t) : Mtx<device_type>(t.get_context())
 {
     auto context = this->get_context();
     mtx_ = t.get_mtx();
@@ -532,7 +532,7 @@ Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_ty
 
 //ok
 template<>
-Sparse<rls::CUDA, __half, magma_int_t>::Sparse(Sparse<rls::CUDA, __half, magma_int_t>&& t) : MtxOp<rls::CUDA>(t.get_context())
+Sparse<rls::CUDA, __half, magma_int_t>::Sparse(Sparse<rls::CUDA, __half, magma_int_t>&& t) : Mtx<rls::CUDA>(t.get_context())
 {
     //context_ = t.get_context();
     //mtx_ = t.get_mtx();
@@ -790,7 +790,7 @@ std::cout << "\n\n_------- MOVE \n\n";
 }
 
 template <ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_type, index_type>& mtx_in) : MtxOp<device_type>(mtx_in.get_context())
+Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_type, index_type>& mtx_in) : Mtx<device_type>(mtx_in.get_context())
 {
 //    nnz_ = mtx_in.get_nnz();
 //    size_ = mtx_in.get_size();

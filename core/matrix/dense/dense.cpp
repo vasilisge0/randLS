@@ -12,6 +12,12 @@ namespace matrix {
 
 
 template <ContextType device_type, typename value_type>
+std::shared_ptr<Context<device_type>> Dense<device_type, value_type>::get_context()
+{
+    return Mtx<device_type>::get_context();
+}
+
+template <ContextType device_type, typename value_type>
 gko::LinOp* Dense<device_type, value_type>::get_mtx()
 {
     return Dense<device_type, value_type>::mtx.get();
@@ -23,8 +29,8 @@ std::shared_ptr<gko::LinOp> Dense<device_type, value_type>::get_mtx_shared()
     return mtx;
 }
 
-template <ContextType device_type, typename value_type>
-dim2 Dense<device_type, value_type>::get_size() { return this->size_; }
+//template <ContextType device_type, typename value_type>
+//dim2 Dense<device_type, value_type>::get_size() { return this->size_; }
 
 template <ContextType device_type, typename value_type>
 magma_int_t Dense<device_type, value_type>::get_alloc_elems()
@@ -35,7 +41,7 @@ magma_int_t Dense<device_type, value_type>::get_alloc_elems()
 template <ContextType device_type, typename value_type>
 size_t Dense<device_type, value_type>::get_num_elems()
 {
-    return size_[0] * size_[1];
+    return this->size_[0] * this->size_[1];
 }
 
 template <ContextType device_type, typename value_type>
@@ -51,41 +57,40 @@ void Dense<device_type, value_type>::set_matrix(std::shared_ptr<gko::LinOp> mtx_
         auto t = static_cast<gko::matrix::Dense<float>*>(mtx.get());
         values_ = (value_type*)t->get_values();
     }
-    size_   = {mtx->get_size()[0], mtx->get_size()[1]};
+    this->size_   = {static_cast<int>(mtx->get_size()[0]), static_cast<int>(mtx->get_size()[1])};
     magma_int_t ld_         = mtx->get_size()[0];
-    magma_int_t alloc_elems = size_[0] * size_[1];
+    magma_int_t alloc_elems = this->size_[0] * this->size_[1];
     value_type* values_     = nullptr;
 }
 
 template <ContextType device_type, typename value_type>
 void Dense<device_type, value_type>::zeros()
 {
-    std::cout << "size_[0]: " << size_[0] << ", size_[1]: " << size_[1] << '\n';
-    memory::zeros<value_type, device_type>(size_, values_);
+    memory::zeros<value_type, device_type>(this->size_, values_);
 }
 
 template <ContextType device_type, typename value_type>
 void Dense<device_type, value_type>::eye()
 {
     if (std::is_same<value_type, double>::value) {
-        memory::eye<double, device_type>({size_[0], size_[1]}, (double*)values_);
+        memory::eye<double, device_type>({this->size_[0], this->size_[1]}, (double*)values_);
     }
     else if (std::is_same<value_type, float>::value) {
-        memory::eye<float, device_type>({size_[0], size_[1]}, (float*)values_);
+        memory::eye<float, device_type>({this->size_[0], this->size_[1]}, (float*)values_);
     }
 }
 
 template <ContextType device_type, typename value_type>
 Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context,
-    dim2 size) : MtxOp<device_type>(context)
+    dim2 size) : Mtx<device_type>(context)
 {
     this->size_ = size;
     this->ld_ = size[0];
     malloc();
     this->alloc_elems = size[0] * size[1];
     if (std::is_same<value_type, __half>::value) {
-        cusparseCreateDnMat(&descr_, static_cast<int64_t>(size_[0]), static_cast<int64_t>(size_[1]),
-            static_cast<int64_t>(size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
+        cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
+            static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
 }
 
@@ -105,7 +110,7 @@ template <ContextType device_type, typename value_type>
 const value_type* Dense<device_type, value_type>::get_const_values() const { return this->values_; }
 
 template <ContextType device_type, typename value_type>
-Dense<device_type, value_type>::Dense(Dense&& mtx) : MtxOp<device_type>(mtx.get_context())
+Dense<device_type, value_type>::Dense(Dense&& mtx) : Mtx<device_type>(mtx.get_context())
 {
     auto t = mtx.get_size();
     this->size_    = mtx.get_size();
@@ -119,14 +124,14 @@ template <ContextType device_type, typename value_type>
 void Dense<device_type, value_type>::malloc()
 {
     if (std::is_same<value_type, double>::value) {
-        auto context = this->get_context();
+        auto context = Mtx<device_type>::get_context();
         auto exec = context->get_executor();
         gko::dim<2> s = {this->size_[0], this->size_[1]};
         mtx = gko::share(gko::matrix::Dense<double>::create(exec, s));
         values_ = (value_type*)(static_cast<gko::matrix::Dense<double>*>(mtx.get())->get_values());
     }
     else if (std::is_same<value_type, float>::value) {
-        auto context = this->get_context();
+        auto context = Mtx<device_type>::get_context();
         auto exec = context->get_executor();
         gko::dim<2> s = {this->size_[0], this->size_[1]};
         mtx = gko::share(gko::matrix::Dense<float>::create(exec, s));
@@ -151,32 +156,32 @@ void Dense<device_type, value_type>::free()
 }
 
 template <ContextType device_type, typename value_type>
-Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context) : MtxOp<device_type>(context) {}
+Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context) : Mtx<device_type>(context) {}
 
 
 template <ContextType device_type, typename value_type>
 Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context,
-    std::string& filename_mtx) : MtxOp<device_type>(context)
+    std::string& filename_mtx) : Mtx<device_type>(context)
 {
     io::read_mtx_size((char*)filename_mtx.c_str(), &this->size_[0],
         &this->size_[1]);
     this->ld_ = this->size_[0];
     malloc();
-    this->alloc_elems = size_[0] * size_[1];
+    this->alloc_elems = this->size_[0] * this->size_[1];
 
     if (std::is_same<value_type, double>::value) {
-        io::read_mtx_values<value_type, device_type>(this->get_context(),
+        io::read_mtx_values<value_type, device_type>(Mtx<device_type>::get_context(),
             (char*)filename_mtx.c_str(), this->size_, this->values_);
     }
     else if (std::is_same<value_type, float>::value) {
-        io::read_mtx_values<value_type, device_type>(this->get_context(),
+        io::read_mtx_values<value_type, device_type>(Mtx<device_type>::get_context(),
             (char*)filename_mtx.c_str(), this->size_, this->values_);
 
     }
 }
 
 template <ContextType device_type, typename value_type>
-Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context, dim2 size, value_type* values) : MtxOp<device_type>(context)
+Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context, dim2 size, value_type* values) : Mtx<device_type>(context)
 {
     auto exec = context->get_executor();
     wrapper_ = true;
@@ -200,13 +205,13 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
         values_ = (value_type*)t->get_values();
     }
     alloc_elems = size[0] * size[1];
-    size_ = size;
-    ld_ = size[0];
+    this->size_ = size;
+    this->ld_ = size[0];
 }
 
 template <ContextType device_type, typename value_type>
 Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> context, dim2 size, magma_int_t ld,
-    value_type* values) : MtxOp<device_type>(context)
+    value_type* values) : Mtx<device_type>(context)
 {
     auto exec = context->get_executor();
     wrapper_ = true;
@@ -231,8 +236,8 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
         values_ = (value_type*)t->get_values();
     }
     alloc_elems = size[0] * size[1];
-    size_ = size;
-    ld_ = ld;
+    this->size_ = size;
+    this->ld_ = ld;
 }
 
 template <ContextType device_type, typename value_type>
@@ -240,9 +245,9 @@ void Dense<device_type, value_type>::apply(Dense<device_type, value_type>* rhs, 
 {
     value_type alpha = 1.0;
     value_type beta = 0.0;
-    blas::gemm(this->get_context(), MagmaNoTrans, MagmaNoTrans, size_[0],
-          rhs->get_size()[1], size_[1], alpha, values_,
-          size_[0], rhs->get_values(), rhs->get_size()[0],
+    blas::gemm(Mtx<device_type>::get_context(), MagmaNoTrans, MagmaNoTrans, this->size_[0],
+          rhs->get_size()[1], this->size_[1], alpha, values_,
+          this->size_[0], rhs->get_values(), rhs->get_size()[0],
           beta, result->get_values(), result->get_size()[0]);
 }
 
@@ -337,8 +342,8 @@ void Dense<device_type, value_type>::copy_from(matrix::Dense<device_type, value_
       this->malloc();
     }
     this->alloc_elems = mtx->get_alloc_elems();
-    utils::convert(this->get_context(), size_[0], size_[1],
-        mtx->get_values(), mtx->get_ld(), values_, ld_);
+    utils::convert(Mtx<device_type>::get_context(), this->size_[0], this->size_[1],
+        mtx->get_values(), mtx->get_ld(), values_, this->ld_);
 
     //// the following is problematic
     //if ((std::is_same<value_type, double>::value) || (std::is_same<value_type, float>::value)) {
@@ -349,7 +354,7 @@ void Dense<device_type, value_type>::copy_from(matrix::Dense<device_type, value_
 template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::transpose()
 {
-    auto c = this->get_context();
+    auto c = Mtx<device_type>::get_context();
     value_type* v = nullptr;
     dim2 s;
     std::shared_ptr<gko::LinOp> t;
@@ -374,7 +379,7 @@ std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::
 template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::row_to_col_order()
 {
-    auto c = this->get_context();
+    auto c = Mtx<device_type>::get_context();
     value_type* v = nullptr;
     dim2 s;
     std::shared_ptr<gko::LinOp> t;

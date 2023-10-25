@@ -12,6 +12,7 @@
 //#include "../../../utils/io.hpp"
 #include "../../../utils/convert.hpp"
 #include "../mtxop.hpp"
+#include "../mtx.hpp"
 #include <ginkgo/ginkgo.hpp>
 
 
@@ -20,8 +21,7 @@ namespace matrix {
 
 
 template <ContextType device_type, typename value_type>
-class Dense : public MtxOp<device_type> {
-
+class Dense : public Mtx<device_type> {
 private:
 
     void malloc();
@@ -40,6 +40,8 @@ private:
     Dense(std::shared_ptr<Context<device_type>> context, dim2 size, magma_int_t ld, value_type* values);
 
 public:
+
+    std::shared_ptr<Context<device_type>> get_context();
 
     void apply(Dense<device_type, value_type>* rhs, Dense<device_type, value_type>* result);
 
@@ -94,7 +96,7 @@ public:
 
     const value_type* get_const_values() const;
 
-    dim2 get_size();
+    //dim2 get_size();
 
     cusparseDnMatDescr_t get_descriptor();
 
@@ -106,7 +108,7 @@ private:
 
     Dense<device_type, value_type>& operator=(Dense<device_type, value_type>&& mtx);
 
-    dim2 size_ = {0, 0};
+    //dim2 size_ = {0, 0};
     magma_int_t ld_ = 0;
     magma_int_t alloc_elems = 0;
     value_type* values_ = nullptr;

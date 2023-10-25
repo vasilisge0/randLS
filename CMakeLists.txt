@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-Wall -std=c++14")
 add_library(mix_n_pick SHARED
             core/memory/magma_context.cpp
             core/memory/memory.cpp
+            core/matrix/mtx.cpp
             core/matrix/mtxop.cpp
             core/matrix/dense/dense.cpp
             core/matrix/sparse/sparse.cpp

@@ -26,6 +26,7 @@
 #include "../cuda/solver/lsqr_kernels.cuh"
 #include "../core/matrix/dense/dense.hpp"
 #include "../core/matrix/sparse/sparse.hpp"
+#include "../core/matrix/mtx.hpp"
 
 
 #endif

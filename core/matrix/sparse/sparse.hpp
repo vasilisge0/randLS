@@ -20,7 +20,7 @@ namespace matrix {
 
 
 template <ContextType device_type, typename value_type, typename index_type>
-class Sparse : public MtxOp<device_type> {
+class Sparse : public Mtx<device_type> {
 public:
 
     static std::unique_ptr<Sparse> create(std::shared_ptr<Context<device_type>> context, dim2 size);

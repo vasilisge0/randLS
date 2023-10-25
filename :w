@@ -40,8 +40,8 @@ enum GlobalDataType{
 
 template<typename vtype_precond_apply, typename vtype_precond_internal, typename vtype_solver_internal, typename vtype_solver>
 void run_lsqr_instance(double tol, int maxiter, int miniter, magma_int_t restarts, double sampling_coeff, std::string& matrix, std::string& filename_relres,
-    std::string& filename_true_error, std::string& filename_stagnation, std::string& filename_noisy_error, std::string& filename_true_similarity,
-    std::string& filename_noisy_similarity, std::string& filename_matrix, std::string& filename_rhs, std::string& filename_true_sol, std::string& filename_noisy_sol)
+    std::string& filename_true_error, std::string& filename_stagnation, std::string& filename_noisy_error,
+    std::string& filename_matrix, std::string& filename_rhs, std::string& filename_true_sol, std::string& filename_noisy_sol)
 {
     using dense = rls::matrix::Dense<rls::CUDA, double>;
     using sparse = rls::matrix::Sparse<rls::CUDA, double, int>;
@@ -134,7 +134,6 @@ void run_lsqr_instance(double tol, int maxiter, int miniter, magma_int_t restart
         solver_config->set_filename_true_error(input_true_sol, filename_true_error);
         solver_config->set_filename_noisy_error(input_noisy_sol, filename_noisy_error);
         solver_config->set_filename_stagnation(filename_stagnation);
-        solver_config->set_filename_similarity(filename_true_similarity, filename_noisy_similarity);
         sol->zeros();
         solver = rls::share(Lsqr::create(context, solver_config, mtx, sol, rhs));
         ir = rls::solver::Ir<rls::CUDA, magma_int_t>::create(solver, restarts);
@@ -278,8 +277,6 @@ struct solver_config_t
     std::string filename_rhs;
     std::string filename_xtrue;
     std::string filename_xnoisy;
-    std::string filename_true_similarity;
-    std::string filename_noisy_similarity;
 };
 
 void run_for_precisions(solver_config_t& parameters)
@@ -296,8 +293,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_0.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_0.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_0.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_0.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_0.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -315,8 +310,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -334,8 +327,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_1.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_1.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_1.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_1.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_1.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -353,8 +344,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -372,8 +361,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_2.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_2.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_2.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_2.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_2.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -391,8 +378,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -410,8 +395,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_3.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_3.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_3.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_3.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_3.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -429,8 +412,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -448,8 +429,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_4.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_4.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_4.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_4.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_4.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -467,8 +446,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -486,8 +463,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_5.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_5.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_5.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_5.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_5.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -505,8 +480,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -525,8 +498,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_6.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_6.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_6.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_6.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_6.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -544,8 +515,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -563,8 +532,6 @@ void run_for_precisions(solver_config_t& parameters)
         auto filename_true_error = parameters.filename_true_error + "_7.mtx";
         auto filename_stagnation = parameters.filename_stagnation + "_7.mtx";
         auto filename_noisy_error = parameters.filename_noisy_error + "_7.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_7.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_7.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -582,8 +549,6 @@ void run_for_precisions(solver_config_t& parameters)
                 filename_true_error,
                 filename_stagnation,
                 filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
                 filename_matrix,
                 filename_rhs,
                 filename_xtrue,
@@ -919,30 +884,30 @@ int main(int argc, char* argv[])
     //    }
     //}
 
-    for (auto& matrix : instance_config.matrix_names) {
-        for (auto& tol : instance_config.tolerances) {
-            for (auto& sampling_coeff : instance_config.sampling_coeffs) {
-                solver_config_t parameters;
-                parameters.tol = tol;
-                parameters.maxiter = 2;
-                parameters.miniter = 2;
-                parameters.restarts = 1;
-                parameters.sampling_coeff = sampling_coeff;
-                parameters.matrix = matrix;
-                std::ostringstream streamObj;
-                std::ostringstream streamObj2;
-                streamObj << parameters.tol;
-                streamObj2 << parameters.sampling_coeff;
-                streamObj2 << std::fixed;
-                streamObj2 << std::setprecision(2);
-                std::string filename_instance = filename_base + parameters.matrix + "/" + streamObj2.str() + "_" + streamObj.str();
-                parameters.filename_relres = filename_instance + "_relres_history";
-                parameters.filename_true_error = filename_instance + "_true_error_history";
-                parameters.filename_stagnation = filename_instance + "_stagnation_history";
-                run_fgmres_for_precisions(parameters);
-            }
-        }
-    }
+    //for (auto& matrix : instance_config.matrix_names) {
+    //    for (auto& tol : instance_config.tolerances) {
+    //        for (auto& sampling_coeff : instance_config.sampling_coeffs) {
+    //            solver_config_t parameters;
+    //            parameters.tol = tol;
+    //            parameters.maxiter = 2;
+    //            parameters.miniter = 2;
+    //            parameters.restarts = 1;
+    //            parameters.sampling_coeff = sampling_coeff;
+    //            parameters.matrix = matrix;
+    //            std::ostringstream streamObj;
+    //            std::ostringstream streamObj2;
+    //            streamObj << parameters.tol;
+    //            streamObj2 << parameters.sampling_coeff;
+    //            streamObj2 << std::fixed;
+    //            streamObj2 << std::setprecision(2);
+    //            std::string filename_instance = filename_base + parameters.matrix + "/" + streamObj2.str() + "_" + streamObj.str();
+    //            parameters.filename_relres = filename_instance + "_relres_history";
+    //            parameters.filename_true_error = filename_instance + "_true_error_history";
+    //            parameters.filename_stagnation = filename_instance + "_stagnation_history";
+    //            run_fgmres_for_precisions(parameters);
+    //        }
+    //    }
+    //}
 
     //for (auto& matrix : instance_config.matrix_names) {
     //    for (auto& tol : instance_config.tolerances) {
@@ -1111,39 +1076,38 @@ int main(int argc, char* argv[])
     //    }
     //}
 
-    //for (auto& matrix : instance_config.matrix_names) {
-    //    for (auto& tol : instance_config.tolerances) {
-    //        for (auto& sampling_coeff : instance_config.sampling_coeffs) {
-    //            solver_config_t parameters;
-    //            //parameters.tol = tol;
-    //            parameters.tol = 1e-8;
-    //            parameters.maxiter = 1000;
-    //            parameters.miniter = 200;
-    //            parameters.restarts = 1;
-    //            parameters.sampling_coeff = sampling_coeff;
-    //            parameters.matrix = matrix;
-    //            std::ostringstream streamObj;
-    //            std::ostringstream streamObj2;
-    //            streamObj << parameters.tol;
-    //            streamObj2 << parameters.sampling_coeff;
-    //            streamObj2 << std::fixed;
-    //            streamObj2 << std::setprecision(2);
-    //            std::string filename_instance = filename_base + parameters.matrix + "_reg1_n1/" + streamObj2.str() + "_" + streamObj.str();
-    //            parameters.filename_relres = filename_instance + "_relres_history";
-    //            parameters.filename_true_error = filename_instance + "_true_error_history";
-    //            parameters.filename_noisy_error = filename_instance + "_noisy_error_history";
-    //            parameters.filename_stagnation = filename_instance + "_stagnation_history";
-    //            parameters.filename_true_similarity = filename_instance + "_true_similarity_history";
-    //            parameters.filename_noisy_similarity = filename_instance + "_noisy_similarity_history";
-    //            parameters.filename_matrix = "../lsqr_data/" + matrix + ".mtx";
-    //            parameters.filename_matrix = "../lsqr_data/" + matrix + ".mtx";
-    //            parameters.filename_rhs = "../lsqr_data/" + matrix + "_breg1.mtx";
-    //            parameters.filename_xtrue = "../lsqr_data/" + matrix + "_xtrue.mtx";
-    //            parameters.filename_xnoisy = "../lsqr_data/" + matrix + "_xnoisyreg1.mtx";
-    //            run_for_precisions(parameters);
-    //        }
-    //    }
-    //}
+    for (auto& matrix : instance_config.matrix_names) {
+        for (auto& tol : instance_config.tolerances) {
+            for (auto& sampling_coeff : instance_config.sampling_coeffs) {
+                solver_config_t parameters;
+                //parameters.tol = tol;
+                parameters.tol = 1e-8;
+                parameters.maxiter = 1000;
+                parameters.miniter = 200;
+                parameters.restarts = 1;
+                parameters.sampling_coeff = sampling_coeff;
+                parameters.matrix = matrix;
+                std::ostringstream streamObj;
+                std::ostringstream streamObj2;
+                streamObj << parameters.tol;
+                streamObj2 << parameters.sampling_coeff;
+                streamObj2 << std::fixed;
+                streamObj2 << std::setprecision(2);
+                std::string filename_instance = filename_base + parameters.matrix + "_reg_n1/" + streamObj2.str() + "_" + streamObj.str();
+                parameters.filename_relres = filename_instance + "_relres_history";
+                parameters.filename_true_error = filename_instance + "_true_error_history";
+                parameters.filename_noisy_error = filename_instance + "_noisy_error_history";
+                parameters.filename_stagnation = filename_instance + "_stagnation_history";
+                parameters.filename_matrix = "../lsqr_data/" + matrix + ".mtx";
+                parameters.filename_xnoisy = "../lsqr_data/" + matrix + "_xnoisyreg.mtx";
+                parameters.filename_matrix = "../lsqr_data/" + matrix + ".mtx";
+                parameters.filename_rhs = "../lsqr_data/" + matrix + "_breg.mtx";
+                parameters.filename_xtrue = "../lsqr_data/" + matrix + "_xtrue.mtx";
+                parameters.filename_xnoisy = "../lsqr_data/" + matrix + "_xnoisyreg.mtx";
+                run_for_precisions(parameters);
+            }
+        }
+    }
 
     return 0;
 }
