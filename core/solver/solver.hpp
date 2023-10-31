@@ -33,11 +33,11 @@ private:
     std::string filename_noisy_sol_;
     std::string filename_true_sol_similarity_history_;
     std::string filename_noisy_sol_similarity_history_;
-    bool record_relres_history_ = true;
-    bool record_true_error_history_ = true;
-    bool record_noisy_error_history_ = true;
-    bool record_stagnation_history_ = true;
-    bool record_sol_similarity_history_ = true;
+    bool record_relres_history_ = false;
+    bool record_true_error_history_ = false;
+    bool record_noisy_error_history_ = false;
+    bool record_stagnation_history_ = false;
+    bool record_sol_similarity_history_ = false;
 
 public:
     void set_tolerance(double tolerance)
@@ -229,35 +229,35 @@ public:
         if (record_relres_history_) {
             auto str = filename_relres_history_.c_str();
             std::cout << "str: " << str << '\n';
-            io::write_mtx(str, completed_iterations_ + 1, 1,
+            io::write_mtx(str, completed_iterations_, 1,
                 (double*)relres_history_->get_values());
         }
 
         if (record_true_error_history_) {
             auto str = filename_true_error_history_.c_str();
-            io::write_mtx(str, completed_iterations_ + 1, 1,
+            io::write_mtx(str, completed_iterations_, 1,
                 true_error_history_->get_values());
         }
 
         if (record_stagnation_history_) {
             auto str = filename_stagnation_history_.c_str();
-            io::write_mtx(str, completed_iterations_ + 1, 1,
+            io::write_mtx(str, completed_iterations_, 1,
                 stagnation_history_->get_values());
         }
 
         if (record_noisy_error_history_) {
             auto str = filename_noisy_error_history_.c_str();
-            io::write_mtx(str, completed_iterations_ + 1, 1,
+            io::write_mtx(str, completed_iterations_, 1,
                 noisy_error_history_->get_values());
         }
 
         if ((record_true_error_history_) && (record_noisy_error_history_) && (record_sol_similarity_history_)) {
             auto str0 = filename_true_sol_similarity_history_.c_str();
-            io::write_mtx(str0, completed_iterations_ + 1, 1,
+            io::write_mtx(str0, completed_iterations_, 1,
                 true_sol_similarity_history_->get_values());
 
             auto str1 = filename_noisy_sol_similarity_history_.c_str();
-            io::write_mtx(str1, completed_iterations_ + 1, 1,
+            io::write_mtx(str1, completed_iterations_, 1,
                 noisy_sol_similarity_history_->get_values());
         }
     }

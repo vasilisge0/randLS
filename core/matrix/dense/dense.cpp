@@ -149,7 +149,6 @@ void Dense<device_type, value_type>::free()
     if (!wrapper_) {
         if (std::is_same<value_type, __half>::value) {
             cusparseDestroyDnMat(descr_);
-            std::cout << "before free\n";
             memory::free<device_type>(this->values_);
         }
     }
@@ -223,7 +222,6 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
             exec, gko::dim<2>(size[0], size[1]),
             gko::make_array_view(exec, size[0]*size[1],
                              (double*)values), ld);
-        std::cout << "after\n";
         auto t = static_cast<gko::matrix::Dense<double>*>(mtx.get());
         values_ = (value_type*)t->get_values();
     }
@@ -307,8 +305,6 @@ std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::
 {
     auto context = mtx_in->get_context();
     auto size = dim2(rspan.get_end() - rspan.get_begin() + 1, 1);
-    std::cout << "size[0]: " << size[0] << '\n';
-    std::cout << "size[1]: " << size[1] << '\n';
     auto tmp = new Dense<device_type, value_type>(context, size, mtx_in->get_values() + mtx_in->get_size()[0] * col + rspan.get_begin());
     return std::unique_ptr<Dense<device_type, value_type>>(tmp);
 }
@@ -317,7 +313,6 @@ template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::create_submatrix(
     matrix::Dense<device_type, value_type>* mtx_in, span rspan, span cspan)
 {
-    std::cout << "in explicit move\n";
     auto context = mtx_in->get_context();
     auto size = mtx_in->get_size();
     auto size_submtx = dim2(rspan.get_end() - rspan.get_begin() + 1, cspan.get_end() - cspan.get_begin() + 1);

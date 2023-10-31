@@ -63,6 +63,16 @@ void print_nnz_gpu(magma_int_t nnz, double* dmtx, magma_queue_t queue);
 
 void print_nnz_gpu(magma_int_t nnz, int* dmtx, magma_queue_t queue);
 
+template <typename value_type, ContextType device_type>
+void read_mtx_values(std::shared_ptr<Context<device_type>> context, char* filename, dim2 size, value_type* values, size_t ld);
+
+template<> void read_mtx_values(std::shared_ptr<Context<CPU>> context, char* filename, dim2 size, double* values, size_t ld);
+
+template<> void read_mtx_values(std::shared_ptr<Context<CPU>> context, char* filename, dim2 size, float* values, size_t ld);
+
+template<> void read_mtx_values(std::shared_ptr<Context<CUDA>> context, char* filename, dim2 size, double* values, size_t ld);
+
+template<> void read_mtx_values(std::shared_ptr<Context<CUDA>> context, char* filename, dim2 size, float* values, size_t ld);
 
 }   // end of namespace rls
 }   // end of namespace io

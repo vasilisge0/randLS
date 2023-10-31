@@ -508,15 +508,14 @@ void initialize(
     matrix::Dense<device, vtype>*
         rhs_in)  // Rhs vector (dense) <-- change those.
 {
+    workspace->completed_iterations_per_restart = 0;
     vtype one = 1.0;
     vtype minus_one = -1.0;
     auto r_mtx = workspace->residual.get();
     workspace->residual->copy_from(rhs_in);
     workspace->rhsnorm = blas::norm2(context, r_mtx->get_size()[0], r_mtx->get_values(), 1);
-    // Residual computation.
     fgmres::gemv(context, minus_one, mtx_in,
                  mtx_t, sol_in, one, r_mtx);
-    // Left apply.
     precond->apply(context, MagmaTrans, r_mtx);
     workspace->beta = blas::norm2(context, workspace->residual->get_size()[0], workspace->residual->get_values(), 1);
     workspace->tmp_cpu->get_values()[0] = workspace->beta;
@@ -527,8 +526,7 @@ void initialize(
     workspace->hessenberg_rhs->get_values()[0] = workspace->beta;
     auto v = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(0, 0));
     v->copy_from(r_mtx);
-    blas::scale(context, v->get_size()[0], 1 / workspace->beta,
-        v->get_values(), 1);
+    blas::scale(context, v->get_size()[0], 1 / workspace->beta, v->get_values(), 1);
 }
 
 template <ContextType device, typename vtype,
@@ -546,22 +544,16 @@ void step_1(
     matrix::Sparse<device, vtype, index_type>* mtx,
     matrix::Sparse<device, vtype, index_type>* mtx_t)
 {
-std::cout << "\n---->STEP_1\n\n";
-    auto z = matrix::Dense<device, vtype>::create_submatrix(workspace->z_basis.get(), span(workspace->completed_iterations, workspace->completed_iterations));
-    auto v = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(workspace->completed_iterations, workspace->completed_iterations));
-    auto w = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(workspace->completed_iterations + 1, workspace->completed_iterations + 1));
+    auto cur_iter = workspace->completed_iterations_per_restart;
+    auto z = matrix::Dense<device, vtype>::create_submatrix(workspace->z_basis.get(), span(cur_iter, cur_iter));
+    auto v = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(cur_iter, cur_iter));
+    auto w = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(cur_iter + 1, cur_iter + 1));
+    auto queue = context->get_queue();
     vtype one = 1.0;
     vtype zero = 0.0;
     z->copy_from(v.get());
-    auto queue = context->get_queue();
     precond->apply(context, MagmaNoTrans, z.get());
-    std::cout << "z: \n";
-    io::print_mtx_gpu(10, 1, z->get_values(), 10, queue);
-
     fgmres::gemv(context, one, mtx, mtx_t, z.get(), zero, w.get());
-
-    std::cout << "w: \n";
-    io::print_mtx_gpu(10, 1, w->get_values(), 10, queue);
     precond->apply(context, MagmaTrans, w.get());
 }
 
@@ -584,6 +576,7 @@ void step_2(
     matrix::Sparse<device, vtype, index_type>* mtx_t,
     matrix::Dense<device, vtype>* sol)
 {
+    auto queue = context->get_queue();
     auto exec = context->get_executor();
     auto size = mtx->get_size();
     auto global_length = size[0] + size[1];
@@ -592,40 +585,34 @@ void step_2(
     auto ld = max_iter + 1;
     auto hessenberg_mtx = workspace->hessenberg_mtx->get_values();
     const dim2 size_h = {max_iter + 1, max_iter};
+    const auto cur_iter = workspace->completed_iterations_per_restart;
     auto w = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(),
-        span(workspace->completed_iterations+ 1, workspace->completed_iterations + 1));
-    const auto cur_iter = workspace->completed_iterations;
-    auto queue = context->get_queue();
-    if (workspace->completed_iterations == 0) {
+        span(cur_iter + 1, cur_iter + 1));
+
+    // Orthogonalize.
+    if (cur_iter == 0) {
         for (auto j = 0; j < max_iter; j++) {
             for (auto i = 0; i < max_iter + 1; i++) {
-                hessenberg_mtx[i + ld * j] =
-                    0.0;
+                hessenberg_mtx[i + ld * j] = 0.0;
             }
         }
     }
     vtype zero = 0.0;
     vtype minus_one = -1.0;
-
-    std::cout << "w: \n";
-    io::print_mtx_gpu(10, 1, w->get_values(), 10, queue);
-
-    for (index_type i = 0; i < workspace->completed_iterations + 1; i++) {
+    for (index_type i = 0; i < cur_iter + 1; i++) {
         auto v = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(), span(i, i));
         auto t = blas::dot(context, global_length, v->get_values(), 1, w->get_values(), 1);
         hessenberg_mtx[i + ld * cur_iter] = t;
-        std::cout << "t: " << t << '\n';
         blas::axpy(context, v->get_size()[0], -t, v->get_values(), 1, w->get_values(), 1);
     }
-
     const auto w_norm = blas::norm2(context, w->get_size()[0], w->get_values(), 1);
-    hessenberg_mtx[workspace->completed_iterations + 1 + (max_iter + 1) * workspace->completed_iterations] = w_norm;
+    workspace->h = w_norm;
+    hessenberg_mtx[cur_iter + 1 + (max_iter + 1) * cur_iter] = w_norm;
 
     // Solve here using givens qr.
     fgmres::givens_qr(dim2(size[0], size[1]), hessenberg_mtx, (max_iter + 1),
                       workspace->hessenberg_rhs->get_values(), cur_iter,
                       max_iter, *workspace->givens_cache.get());
-    std::cout << "workspace->hessenberg_rhs->get_values()[0]: " << workspace->hessenberg_rhs->get_values()[0] << '\n';
     const auto hessenberg_mtx_gpu = workspace->hessenberg_mtx_gpu->get_values();
     const auto hessenberg_rhs_gpu = workspace->hessenberg_rhs_gpu->get_values();
     memory::setmatrix(max_iter + 1, max_iter, hessenberg_mtx,
@@ -635,31 +622,16 @@ void step_2(
                       max_iter + 1, hessenberg_rhs_gpu, max_iter + 1,
                       queue);
 
-
-    std::cout << "H: \n";
-    io::print_mtx_gpu(cur_iter + 1, cur_iter, hessenberg_mtx_gpu, cur_iter+1, queue);
-
-    std::cout << "sol: \n";
-    io::print_mtx_gpu(cur_iter + 1, 1, hessenberg_rhs_gpu, cur_iter+1, queue);
-
     blas::trsv(context, MagmaUpper, MagmaNoTrans, MagmaNonUnit, cur_iter + 1,   // Solves with factorized matrix.
         hessenberg_mtx_gpu, (max_iter + 1), hessenberg_rhs_gpu, 1);
-
-    std::cout << "sol (before): \n";
-    io::print_mtx_gpu(cur_iter + 1, 1, sol->get_values(), cur_iter+1, queue);
 
     // Update solution x. Needs to be changed as to augment an initial
     // solution vector.
     blas::gemv(context, MagmaNoTrans, (int)global_length, (int)cur_iter + 1,
         (vtype)1.0, workspace->z_basis->get_values(),
-        (int)global_length, hessenberg_rhs_gpu, (int)1, (vtype)1.0,
+        (int)global_length, hessenberg_rhs_gpu, (int)1, (vtype)0.0,
         sol->get_values(), (int)1);
 
-    std::cout << "global_length: " << global_length << '\n';
-    std::cout << "sol (after): \n";
-    io::print_mtx_gpu(cur_iter + 1, 1, sol->get_values(), cur_iter+1, queue);
-    std::cout << "z_basis: \n";
-    io::print_mtx_gpu(cur_iter + 1, 1, workspace->z_basis->get_values(), cur_iter+1, queue);
     // works up to here
 }
 
@@ -679,8 +651,8 @@ bool check_stopping_criteria(
     matrix::Dense<device, vtype>* rhs_in,
     matrix::Dense<device, vtype>* sol_in)
 {
-std::cout << "IN CHECK STOPPING CRITERIA\n";
     workspace->completed_iterations += 1;
+    workspace->completed_iterations_per_restart += 1;
     vtype one = 1.0;
     vtype minus_one = -1.0;
     //workspace->residual->copy_from(rhs_in);
@@ -690,22 +662,17 @@ std::cout << "IN CHECK STOPPING CRITERIA\n";
     //             sol_in, one, workspace->residual.get());
     fgmres::gemv(context, minus_one, mtx_in, mtx_t,
                  sol_in, one, v.get());
-    std::cout << "sol (stop): \n";
     auto queue = context->get_queue();
-    io::print_mtx_gpu(2, 1, sol_in->get_values(), 2, queue);
- std::cout << "after gemv\n";
     auto t = blas::norm2(context, workspace->residual->get_size()[0], workspace->residual->get_values(), 1);
     workspace->resnorm = t / workspace->rhsnorm;    // save workspace->rhsnorm
-    std::cout << "t: " << t << '\n';
-    std::cout << workspace->completed_iterations << ", " << workspace->resnorm << '\n';
+    std::cout << "completed_iterations: " << workspace->completed_iterations << " / " << workspace->resnorm << '\n';
     if ((workspace->completed_iterations >= config->get_iterations()) ||
          (workspace->resnorm < config->get_tolerance())) {
          return true;
     } else {
         return false;
     }
-std::cout << "In_-_. stop\n";
-return true;
+    return true;
 }
 
 }  // end namespace fgmres
@@ -758,10 +725,8 @@ Fgmres<device, vtype, vtype_internal_0, vtype_precond_0,
                                 vtype_precond_0,
                                 index_type>::create(context, mtx, config,
                                                     mtx->get_size());
-    std::cout << "rhs_->get_size()[0]: " << rhs_->get_size()[0] << '\n';
     workspace_->rhsnorm = blas::norm2(context, rhs_->get_size()[0], rhs_->get_values(), 1);
     //workspace_->rhsnorm = blas::norm2(context, workspace_->aug_rhs->get_size()[0], workspace_->aug_rhs->get_values(), 1);
-    std::cout << "workspace_->rhsnorm: " << workspace_->rhsnorm << '\n';
     blas::copy(context, mtx->get_size()[1], this->sol_->get_values(), 1,
                workspace_->aug_sol->get_values() + mtx->get_size()[0], 1);
     config_ = config;
@@ -792,6 +757,7 @@ bool Fgmres<device, vtype, vtype_internal_0, vtype_precond_0,
     //return false;
 //    auto logger = config_->get_logger();
 //    return (logger.resnorm_ < config_->get_tolerance());
+    return (workspace_->resnorm < config_->get_tolerance());
 }
 
 
@@ -920,25 +886,23 @@ void run_fgmres(
     auto mtx_t =
         dynamic_cast<matrix::Sparse<device, vtype, index_type>*>(
             workspace->mtx_in_t.get());
-    std::cout << "in run_fgmres\n";
     fgmres::initialize(
         context,
         logger, precond, workspace, mtx, mtx_t, sol, rhs);
-    //auto mtx_op = mtx->get_mtx();
     while (1) {
         fgmres::step_1(context,
                        config, logger, precond, workspace, mtx, mtx_t);
         fgmres::step_2(context, config, logger, precond, workspace, mtx, mtx_t, sol);
         if (fgmres::check_stopping_criteria(context, workspace, config, logger, mtx,
                                             mtx_t, rhs, sol)) {
+            // have to do some copying here
             break;
         }
-        auto coeff = gko::initialize<gko::matrix::Dense<vtype>>(
-            {(vtype)1.0/workspace->h}, exec);
+        auto cur_iter = workspace->completed_iterations_per_restart;
         // Vector w to be scaled.
         auto w = matrix::Dense<device, vtype>::create_submatrix(workspace->v_basis.get(),
-            span(workspace->completed_iterations, workspace->completed_iterations));
-        static_cast<gko::matrix::Dense<vtype>*>(w->get_mtx())->scale(coeff);
+            span(cur_iter, cur_iter));
+        blas::scale(context, w->get_size()[0], 1/workspace->h, w->get_values(), 1);
     }
 }
 

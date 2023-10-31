@@ -64,15 +64,14 @@ void GeneralizedSplit<device_type, value_type, value_type_internal_0, value_type
     auto size = dim2(u_vector->get_size()[0] - precond_mtx_->get_size()[1], precond_mtx_->get_size()[1]);
     //auto u1 = rls::matrix::Dense<device_type, value_type>::create(context,
     //    dim2(size[1], 1), u_vector->get_values() + size[0]);
-        std::cout << "before u1\n";
     //auto u1 = matrix::Dense<device_type, value_type>::create_submatrix(u_vector,
     //    span(size[0], size[0] + size[1]), span(0, 0));
     auto u1 = matrix::Dense<device_type, value_type>::create_subcol(u_vector,
         span(size[0], size[0] + size[1]), 0);
-
     temp1->copy_from(u1.get());
     value_type_precond_0 one = 1.0;
     value_type_precond_0 zero = 0.0;
+    auto queue = context->get_queue();
     blas::gemv(context, trans, size[1], size[1], one, precond_mtx_internal_->get_values(),
            precond_mtx_->get_size()[0], temp1->get_values(), 1, zero, temp2->get_values(), 1);
     u1->copy_from(temp2.get());
@@ -96,6 +95,7 @@ void GeneralizedSplit<device_type, value_type, value_type_internal_0, value_type
     }
     blas::trtri(context, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
+    io::read_mtx_values<double, CUDA>(context, "precondg.mtx", precond_mtx_->get_size(), (double*)precond_mtx_->get_values(), precond_mtx_->get_ld());
     // Needs to transpose precond_mtx_->get_values()
     precond_mtx_internal_->copy_from(precond_mtx_.get());
 }
@@ -142,10 +142,9 @@ GeneralizedSplit<device_type, value_type, value_type_internal_0, value_type_prec
     this->sketch_ = sketch;
     this->precond_mtx_ = matrix::Dense<device_type, value_type>::create(context, {sketch->get_size()[0], mtx->get_size()[1]});
     this->precond_mtx_internal_ = matrix::Dense<device_type, value_type_precond_0>::create(context, {sketch->get_size()[0], mtx->get_size()[1]});
-    std::cout << "constructor generalized split\n";
-    std::cout << "mtx->get_size()[1]: " << mtx->get_size()[1] << '\n';
     temp1 = matrix::Dense<device_type, value_type_precond_0>::create(context, {mtx->get_size()[1], 1});
     temp2 = matrix::Dense<device_type, value_type_precond_0>::create(context, {mtx->get_size()[1], 1});
+    generate();
 }
 
 template class GeneralizedSplit<CUDA, double, double, double, magma_int_t>;

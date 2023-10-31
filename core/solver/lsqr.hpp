@@ -66,6 +66,7 @@ struct Workspace {
     std::shared_ptr<rls::matrix::Dense<device, vtype>> sol_;
     std::shared_ptr<rls::matrix::Dense<device, vtype_refine>> rhs_refine_;
     std::shared_ptr<rls::matrix::Dense<device, vtype_refine>> temp_refine_;
+    std::shared_ptr<rls::matrix::Dense<device, vtype_refine>> res_refine_;
     std::shared_ptr<rls::matrix::Dense<device, vtype>> temp1;
     std::shared_ptr<rls::matrix::Dense<device, vtype_precond_apply>> u_apply_;
     std::shared_ptr<rls::matrix::Dense<device, vtype_precond_apply>> v_apply_;

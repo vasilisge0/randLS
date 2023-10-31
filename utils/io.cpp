@@ -386,6 +386,65 @@ void write_output(const char* filename, magma_int_t num_rows, magma_int_t num_co
 }
 
 
+
+
+template <typename value_type, ContextType device_type>
+void read_mtx_values(std::shared_ptr<Context<device_type>> context, char* filename, dim2 size, value_type* values, size_t ld);
+
+template<> void read_mtx_values<double, CPU>(std::shared_ptr<Context<CPU>> context, char* filename, dim2 size, double* values, size_t ld) {
+    MM_typecode matcode;
+    auto m = size[0];
+    auto n = size[1];
+    FILE* file_handle = fopen(filename, "r");
+    mm_read_banner(file_handle, &matcode);
+    mm_read_mtx_array_size(file_handle, &size[0], &size[1]);
+    for (int i = 0; i < m; ++i) {
+       for (int j = 0; j < n; ++j) {
+           fscanf(file_handle, "%lf ", &values[i * ld + j]);    // this seems wrong
+       }
+    }
+    fclose(file_handle);
+}
+
+template <>
+void read_mtx_values<float, CPU>(std::shared_ptr<Context<CPU>> context, char* filename, dim2 size, float* values, size_t ld) {
+    MM_typecode matcode;
+    auto m = size[0];
+    auto n = size[1];
+    FILE* file_handle = fopen(filename, "r");
+    mm_read_banner(file_handle, &matcode);
+    mm_read_mtx_array_size(file_handle, &size[0], &size[1]);
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            fscanf(file_handle, "%lf ", &values[i * ld + j]);    // this seems wrong
+        }
+    }
+    fclose(file_handle);
+}
+
+template <>
+void read_mtx_values<double, CUDA>(std::shared_ptr<Context<CUDA>> context, char* filename_mtx, dim2 size, double* values, size_t ld) {
+    std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create();
+    auto tmp = matrix::Dense<CPU, double>::create(context_cpu, size);
+    auto queue = context->get_queue();
+    io::read_mtx_values<double, CPU>(context_cpu, filename_mtx, size,
+       tmp->get_values(), ld);
+    memory::setmatrix(size[0], size[1], tmp->get_values(),
+       size[0], values, ld, queue);
+}
+
+template <>
+void read_mtx_values<float, CUDA>(std::shared_ptr<Context<CUDA>> context, char* filename_mtx, dim2 size, float* values, size_t ld) {
+    std::shared_ptr<Context<CPU>> context_cpu = Context<CPU>::create();
+    //auto tmp = matrix::Dense<CPU, float>::create(context_cpu, size);
+    //auto queue = context->get_queue();
+    //io::read_mtx_values<float, CPU>(context_cpu, filename_mtx, size,
+    //   tmp->get_values());
+    //memory::setmatrix(size[0], size[1], tmp->get_values(),
+    //   size[0], values, size[0], queue);
+}
+
+
 }   // end of namespace io
 }   // end of namespace rls
 
