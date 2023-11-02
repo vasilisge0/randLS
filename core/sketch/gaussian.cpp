@@ -73,16 +73,23 @@ void GaussianSketch<device_type, value_type, value_type_apply, index_type>::appl
     else if (auto t = dynamic_cast<matrix::Sparse<device_type, value_type_apply, index_type>*>(rhs.get()); t != nullptr) {
         auto context = mtx_->get_context();
         auto exec = context->get_executor();
-        auto one = gko::initialize<gko::matrix::Dense<value_type>>(
-            {(value_type)1.0}, exec);
-        auto zero = gko::initialize<gko::matrix::Dense<value_type>>(
-            {(value_type)0.0}, exec);
+        value_type one = 1.0;
+        value_type zero = 0.0;
+        //auto one = gko::initialize<gko::matrix::Dense<value_type>>(
+        //    {(value_type)1.0}, exec);
+        //auto zero = gko::initialize<gko::matrix::Dense<value_type>>(
+        //    {(value_type)0.0}, exec);
         //mtx_->get_mtx()->apply(one, t->get_mtx(), zero, result->get_mtx());
-        auto A = static_cast<gko::matrix::Csr<value_type_apply, index_type>*>(t->get_mtx().get())->transpose();
-        auto S = static_cast<gko::matrix::Dense<value_type_apply>*>(mtx_->get_mtx())->transpose();
-        auto t1 = gko::matrix::Dense<value_type_apply>::create(exec, gko::dim<2>(A->get_size()[0], S->get_size()[1]));
-        A->apply(one, S, zero, t1);
-        exec->copy(t1->get_size()[0] * t1->get_size()[1], static_cast<gko::matrix::Dense<value_type_apply>*>(t1.get())->get_values(),
+        // Fix this
+        //auto A = static_cast<gko::matrix::Csr<value_type_apply, index_type>*>(t->get_mtx().get())->transpose();
+        //auto S = static_cast<gko::matrix::Dense<value_type_apply>*>(mtx_->get_mtx())->transpose();
+        //auto t1 = gko::matrix::Dense<value_type_apply>::create(exec, gko::dim<2>(A->get_size()[0], S->get_size()[1]));
+        auto A = t->transpose();
+        auto S = mtx_->transpose();
+        auto t1_size = dim2(static_cast<int>(A->get_size()[0]), static_cast<int>(S->get_size()[1]));
+        auto t1 = matrix::Dense<device_type, value_type_apply>::create(context, t1_size);
+        A->apply(one, S.get(), zero, t1.get());
+        exec->copy(t1->get_size()[0] * t1->get_size()[1], t1->get_values(),
             result->get_values());
     }
 }
@@ -114,7 +121,7 @@ GaussianSketch<device_type, value_type, value_type_apply, index_type>::GaussianS
 
 template class GaussianSketch<CUDA, double, double, magma_int_t>;
 template class GaussianSketch<CUDA, double, float, magma_int_t>;
-//template class GaussianSketch<CUDA, double, __half, magma_int_t>;
+template class GaussianSketch<CUDA, double, __half, magma_int_t>;
 template class GaussianSketch<CUDA, float, float, magma_int_t>;
 //template class GaussianSketch<CUDA, float, __half, magma_int_t>;
 

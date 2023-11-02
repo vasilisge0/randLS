@@ -59,6 +59,7 @@ struct Workspace {
     std::shared_ptr<rls::matrix::Dense<device, vtype_internal>> u_in;
     std::shared_ptr<rls::matrix::Dense<device, vtype_internal>> v_in;
     std::shared_ptr<rls::matrix::Dense<device, vtype_internal>> temp_in;
+    std::shared_ptr<rls::matrix::Dense<device, vtype_internal>> temp1_in;
     std::shared_ptr<rls::matrix::Dense<device, vtype_internal>> mtx_in;
     std::shared_ptr<rls::MtxOp<device>> mtx_apply;
     std::shared_ptr<rls::MtxOp<device>> mtx_;

@@ -120,6 +120,9 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::g
     //@error here
     blas::trtri(context_, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
+    auto queue = context_->get_queue();
+    io::write_mtx("precond_hgdp.mtx", precond_mtx_->get_size()[0], precond_mtx_->get_size()[1],
+        (double*)precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
     precond_mtx_apply_->copy_from(precond_mtx_.get());
 }
 

@@ -250,6 +250,15 @@ void Dense<device_type, value_type>::apply(Dense<device_type, value_type>* rhs, 
 }
 
 template <ContextType device_type, typename value_type>
+void Dense<device_type, value_type>::apply(value_type alpha, Dense<device_type, value_type>* rhs, value_type beta, Dense<device_type, value_type>* result)
+{
+    blas::gemm(Mtx<device_type>::get_context(), MagmaNoTrans, MagmaNoTrans, this->size_[0],
+          rhs->get_size()[1], this->size_[1], alpha, values_,
+          this->size_[0], rhs->get_values(), rhs->get_size()[0],
+          beta, result->get_values(), result->get_size()[0]);
+}
+
+template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::create(
     std::shared_ptr<Context<device_type>> context)
 {

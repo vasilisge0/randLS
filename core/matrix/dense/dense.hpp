@@ -45,6 +45,8 @@ public:
 
     void apply(Dense<device_type, value_type>* rhs, Dense<device_type, value_type>* result);
 
+    void apply(value_type alpha, Dense<device_type, value_type>* rhs, value_type beta, Dense<device_type, value_type>* result);
+
     std::unique_ptr<Dense<device_type, value_type>> transpose();
 
     std::unique_ptr<Dense<device_type, value_type>> row_to_col_order();

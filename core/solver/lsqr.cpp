@@ -67,9 +67,13 @@ Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
         u_in    = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[0], 1)));
         v_in    = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[1], 1)));
         temp_in = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[0], 1)));
+        temp1_in = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[1], 1)));
         mtx_in  = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[0], size[1])));
     }
-
+    v_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context, dim2(size[1], 1));
+    v_apply_->zeros();
+    u_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context, dim2(size[1], 1));
+    u_apply_->zeros();
 }
 
 template <ContextType device,
@@ -117,6 +121,7 @@ Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
         u_in    = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[0], 1)));
         v_in    = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[1], 1)));
         temp_in = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[0], 1)));
+        temp1_in = rls::share(matrix::Dense<device, vtype_internal>::create(context, dim2(size[1], 1)));
         if (auto t = dynamic_cast<matrix::Sparse<device, vtype_refine, itype>*>(mtx.get()); t != nullptr)
         {
             mtx_apply = matrix::Sparse<device, vtype_internal, itype>::create(context, t->get_size(), t->get_nnz());
@@ -144,6 +149,11 @@ Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
     }
     temp_refine_ = rls::share(matrix::Dense<device, vtype_refine>::create(context, sol->get_size()));
     temp_refine_->zeros();
+
+    v_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context, dim2(size[1], 1));
+    v_apply_->zeros();
+    u_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context, dim2(size[1], 1));
+    u_apply_->zeros();
 }
 
 
@@ -329,9 +339,16 @@ void initialize(std::shared_ptr<Context<device>> context,
                    (vtype*)workspace->u->get_values(), 1, zero, (vtype*)workspace->v->get_values(),
                    1);
     }
-    precond->apply(context, MagmaTrans, workspace->v.get());
-    workspace->alpha = blas::norm2(context, num_cols, workspace->v->get_values(),
-        workspace->inc);
+
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->v_in->copy_from(workspace->v.get());
+        precond->apply(context, MagmaTrans, workspace->v_in.get());
+        workspace->v->copy_from(workspace->v_in.get());
+    }
+    else {
+        precond->apply(context, MagmaTrans, workspace->v.get());
+    }
+    workspace->alpha = blas::norm2(context, num_cols, workspace->v->get_values(), 1);
     blas::scale(context, num_cols, one / workspace->alpha, workspace->v->get_values(),
                 workspace->inc);
     blas::copy(context, num_cols, workspace->v->get_values(), workspace->inc, workspace->w->get_values(),
@@ -368,23 +385,32 @@ void step_1(std::shared_ptr<Context<device>> context,
     double first_measurement = 0.0;
     // Compute new u vector.
     blas::scale(context, num_rows, workspace->alpha, workspace->u->get_values(), inc);
-    blas::copy(context, num_cols, workspace->v->get_values(), inc, workspace->temp->get_values(), inc);
-    precond->apply(context, MagmaNoTrans, workspace->temp.get());
+    blas::copy(context, num_cols, workspace->v->get_values(), inc, workspace->temp1->get_values(), inc);
+
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->u_apply_->copy_from(workspace->temp1.get());
+        precond->apply(context, MagmaNoTrans, workspace->u_apply_.get());
+        workspace->temp1->copy_from(workspace->u_apply_.get());
+    }
+    else {
+        precond->apply(context, MagmaNoTrans, workspace->temp1.get());
+    }
     vtype one = 1.0;
     vtype zero = 0.0;
     vtype minus_one = -1.0;
     if (!std::is_same<vtype_internal, vtype>::value) {
-        auto temp_cur = matrix::Dense<device, vtype>::create_submatrix(workspace->temp, span(0, 0));
+        //auto temp_cur = matrix::Dense<device, vtype>::create_submatrix(workspace->temp, span(0, 0));
         auto u_cur = matrix::Dense<device, vtype>::create_submatrix(workspace->u, span(0, 0));
-        workspace->temp_in->copy_from(temp_cur.get());
+        //workspace->temp_in->copy_from(temp_cur.get());
+        workspace->temp1_in->copy_from(workspace->temp1.get());
         workspace->u_in->copy_from(u_cur.get());
         blas::gemv(context, MagmaNoTrans, num_rows, num_cols, 1.0, workspace->mtx_in,
-                   num_rows, workspace->temp_in, inc, -1.0, workspace->u_in,
+                   num_rows, workspace->temp1_in, inc, -1.0, workspace->u_in,
                    inc);
         workspace->u->copy_from(workspace->u_in.get());
     } else {
         blas::gemv(context, MagmaNoTrans, num_rows, num_cols, one, mtx, num_rows,
-                   workspace->temp->get_values(), inc, minus_one, workspace->u->get_values(), inc);
+                   workspace->temp1->get_values(), inc, minus_one, workspace->u->get_values(), inc);
     }
     workspace->beta = blas::norm2(context, num_rows, workspace->u->get_values(), inc);
     blas::scale(context, num_rows, one / workspace->beta, workspace->u->get_values(), inc);
@@ -395,19 +421,27 @@ void step_1(std::shared_ptr<Context<device>> context,
         workspace->temp_in->copy_from(temp_cur.get());
         workspace->u_in->copy_from(u_cur.get());
         blas::gemv(context, MagmaTrans, num_rows, num_cols, 1.0, workspace->mtx_in,
-                   num_rows, workspace->u_in, inc, 0.0, workspace->temp_in,
+                   num_rows, workspace->u_in, inc, 0.0, workspace->temp1_in,
                    inc);
-        workspace->temp->copy_from(workspace->temp_in.get());
+        workspace->temp1->copy_from(workspace->temp1_in.get());
     } else {
+    // wrong dimensino of workspace->temp
         blas::gemv(context, MagmaTrans, num_rows, num_cols, one, mtx, num_rows,
-                   workspace->u->get_values(), inc, zero, workspace->temp->get_values(), inc);
+                   workspace->u->get_values(), inc, zero, workspace->temp1->get_values(), inc);
     }
-    precond->apply(context, MagmaTrans, workspace->temp.get());
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->u_apply_->copy_from(workspace->temp1.get());
+        precond->apply(context, MagmaTrans, workspace->u_apply_.get());
+        workspace->temp1->copy_from(workspace->u_apply_.get());
+    }
+    else {
+        precond->apply(context, MagmaNoTrans, workspace->temp1.get());
+    }
     blas::axpy(context, num_cols, -(workspace->beta), workspace->v->get_values(), 1,
-               workspace->temp->get_values(), 1);
-    workspace->alpha = blas::norm2(context, num_cols, workspace->temp->get_values(), inc);
-    blas::scale(context, num_cols, 1 / workspace->alpha, workspace->temp->get_values(), inc);
-    blas::copy(context, num_cols, workspace->temp->get_values(), inc, workspace->v->get_values(), inc);
+               workspace->temp1->get_values(), 1);
+    workspace->alpha = blas::norm2(context, num_cols, workspace->temp1->get_values(), inc);
+    blas::scale(context, num_cols, 1 / workspace->alpha, workspace->temp1->get_values(), inc);
+    blas::copy(context, num_cols, workspace->temp1->get_values(), inc, workspace->v->get_values(), inc);
 }
 
 template <ContextType device,
@@ -449,9 +483,18 @@ void step_2(std::shared_ptr<Context<device>> context,
     workspace->rho_bar = -c * workspace->alpha;
     auto phi = c * (workspace->phi_bar);
     workspace->phi_bar = s * (workspace->phi_bar);
-    blas::copy(context, num_cols, workspace->w->get_values(), inc, workspace->temp->get_values(), inc);
-    precond->apply(context, MagmaNoTrans, workspace->temp.get());
-    blas::axpy(context, num_cols, phi / rho, workspace->temp->get_values(), 1, sol, 1);
+    blas::copy(context, num_cols, workspace->w->get_values(), inc, workspace->temp1->get_values(), inc);
+    std::cout << "_step_2_\n";
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        std::cout << "--->\n";
+        workspace->u_apply_->copy_from(workspace->temp1.get());
+        precond->apply(context, MagmaNoTrans, workspace->u_apply_.get());
+        workspace->temp1->copy_from(workspace->u_apply_.get());
+    }
+    else {
+        precond->apply(context, MagmaNoTrans, workspace->temp1.get());
+    }
+    blas::axpy(context, num_cols, phi / rho, workspace->temp1->get_values(), 1, sol, 1);
     // Compute new vector w.
     blas::scale(context, num_cols, -(theta / rho), workspace->w->get_values(), inc);
     blas::axpy(context, num_cols, one, workspace->v->get_values(), 1, workspace->w->get_values(), 1);
@@ -503,81 +546,6 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
 }  // end of anonymous namespace
 
 
-template <ContextType device,
-          typename vtype,
-          typename vtype_internal,
-          typename vtype_precond_apply,
-          typename vtype_refine,
-          typename itype>
-void run_lsqr(std::shared_ptr<Context<device>> context,
-              iterative::LsqrConfig<
-                  vtype, vtype_internal,
-                  vtype_precond_apply, vtype_refine, itype>*
-                  config,
-              iterative::Logger* logger,
-              PrecondOperator<device, vtype_precond_apply,
-                                     itype>* precond,
-              lsqr::Workspace<device, vtype, vtype_internal,
-                             vtype_precond_apply, vtype_refine, itype>* workspace,
-              matrix::Dense<device, vtype_refine>* mtx,
-              matrix::Dense<device, vtype_refine>* rhs,
-              matrix::Dense<device, vtype_refine>* sol)
-{
-    //initialize(context, config, logger, precond, workspace, mtx, rhs);
-    //while (1) {
-    //    step_1(context, config, logger, precond, workspace, mtx);
-    //    step_2(context, config, logger, precond, workspace, mtx, sol);
-    //    //if (check_stopping_criteria(context, config, logger, workspace->mtx_refine, workspace->rhs_refine, workspace->sol, workspace->temp->get_values())) {
-    //    //    break;
-    //    //}
-    //}
-}
-
-template void run_lsqr(std::shared_ptr<Context<CUDA>> context,
-              iterative::LsqrConfig<double, double, double, double, magma_int_t>* config,
-              iterative::Logger* logger,
-              PrecondOperator<CUDA, double, magma_int_t>* precond,
-              lsqr::Workspace<CUDA, double, double, double, double, magma_int_t>* workspace,
-              matrix::Dense<CUDA, double>* mtx,
-              matrix::Dense<CUDA, double>* rhs,
-              matrix::Dense<CUDA, double>* sol);
-
-//template
-//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
-//              iterative::Logger logger,
-//              PrecondOperator<CUDA, float, magma_int_t>* precond,
-//              lsqr::Workspace<double, float, float, magma_int_t>* workspace,
-//              matrix::Dense<CUDA, double>* mtx,
-//              matrix::Dense<CUDA, double>* rhs,
-//              matrix::Dense<CUDA, double>* sol);
-//
-//template
-//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
-//              iterative::Logger logger,
-//              PrecondOperator<CUDA, __half, magma_int_t>* precond,
-//              lsqr::Workspace<double, __half, __half, magma_int_t>* workspace,
-//              matrix::Dense<CUDA, double>* mtx,
-//              matrix::Dense<CUDA, double>* rhs,
-//              matrix::Dense<CUDA, double>* sol);
-//
-//template
-//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
-//              iterative::Logger logger,
-//              PrecondOperator<CUDA, float, magma_int_t>* precond,
-//              lsqr::Workspace<float, float, float, magma_int_t>* workspace,
-//              matrix::Dense<CUDA, float>* mtx,
-//              matrix::Dense<CUDA, float>* rhs,
-//              matrix::Dense<CUDA, float>* sol);
-//
-//template
-//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
-//              iterative::Logger logger,
-//              PrecondOperator<CUDA, __half, magma_int_t>* precond,
-//              lsqr::Workspace<float, __half, __half, magma_int_t>* workspace,
-//              matrix::Dense<CUDA, float>* mtx,
-//              matrix::Dense<CUDA, float>* rhs,
-//              matrix::Dense<CUDA, float>* sol);
-//
 
 
 template <ContextType device,
@@ -636,6 +604,158 @@ void initialize(std::shared_ptr<Context<device>> context,
                workspace->inc);
     workspace->phi_bar = workspace->beta;
     workspace->rho_bar = workspace->alpha;
+}
+
+template <ContextType device,
+          typename vtype,
+          typename vtype_internal,
+          typename vtype_precond_apply,
+          typename vtype_refine,
+          typename itype>
+void initialize(std::shared_ptr<Context<device>> context,
+                iterative::LsqrConfig<vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* config,
+                iterative::Logger* logger,
+                Preconditioner* precond,
+                lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
+                matrix::Dense<device, vtype>* mtx_in,
+                matrix::Dense<device, vtype>* rhs_in)
+{
+    auto size = mtx_in->get_size();
+    auto rhs = rhs_in->get_values();
+    itype num_rows = size[0];
+    itype num_cols = size[1];
+    vtype one = 1.0;
+    vtype zero = 0.0;
+    workspace->inc = 1;
+    workspace->beta = blas::norm2(context, num_rows, rhs, workspace->inc);
+    auto queue = context->get_queue();
+    blas::copy(context, num_rows, rhs, 1, workspace->u->get_values(), 1);
+    blas::scale(context, num_rows, one / workspace->beta, workspace->u->get_values(), 1);
+    auto exec = context->get_executor();
+    auto v_cur = matrix::Dense<device, vtype>::create_submatrix(workspace->v.get(), span(0, 0));
+    if (!std::is_same<vtype_internal, vtype>::value) {
+        workspace->v_in->copy_from(workspace->v.get());
+        workspace->u_in->copy_from(workspace->u.get());
+        auto t = static_cast<matrix::Dense<device, vtype_internal>*>(workspace->mtx_apply.get());
+        blas::gemv(context, MagmaTrans, num_rows, num_cols, (vtype_internal)one,
+            t->get_values(), t->get_ld(), workspace->u_in->get_values(),
+            1, (vtype_internal)zero, workspace->v_in->get_values(), 1);
+        v_cur->copy_from(workspace->v_in.get());
+    } else {
+        blas::gemv(context, MagmaTrans, num_rows, num_cols, one,
+            mtx_in->get_values(), mtx_in->get_ld(), workspace->u->get_values(),
+            1, zero, v_cur->get_values(), 1);
+    }
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->v_apply_->copy_from(v_cur.get());
+        auto precond_operator = static_cast<PrecondOperator<device, vtype_precond_apply, itype>*>(precond);
+        precond_operator->apply(context, MagmaTrans, workspace->v_apply_.get());
+        v_cur.get()->copy_from(workspace->v_apply_.get());
+    }
+    else {
+        auto precond_operator = static_cast<PrecondOperator<device, vtype, itype>*>(precond);
+        // error before there
+        precond_operator->apply(context, MagmaTrans, v_cur.get());
+    }
+    workspace->alpha = blas::norm2(context, num_cols, v_cur->get_values(), 1);
+    cudaDeviceSynchronize();
+    blas::scale(context, num_cols, one / workspace->alpha, v_cur->get_values(),
+                workspace->inc);
+    blas::copy(context, num_cols, v_cur->get_values(), workspace->inc, workspace->w->get_values(),
+               workspace->inc);
+    workspace->phi_bar = workspace->beta;
+    workspace->rho_bar = workspace->alpha;
+}
+
+// Step 1 of preconditioned LSQR.
+template <ContextType device,
+          typename vtype,
+          typename vtype_internal,
+          typename vtype_precond_apply,
+          typename vtype_refine,
+          typename itype>
+void step_1(std::shared_ptr<Context<device>> context,
+            iterative::LsqrConfig<vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* config,
+            iterative::Logger* logger,
+            //PrecondOperator<device, vtype_precond_apply, itype>* precond,
+            Preconditioner* precond,
+            lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
+            matrix::Dense<device, vtype>* mtx_in)
+{
+std::cout << "_step_1_\n";
+    auto num_rows = mtx_in->get_size()[0];
+    auto num_cols = mtx_in->get_size()[1];
+    auto mtx = mtx_in->get_values();
+    itype inc = 1;
+    double first_measurement = 0.0;
+    // Compute new u vector.
+    blas::scale(context, num_rows, workspace->alpha, workspace->u->get_values(), inc);
+    blas::copy(context, num_cols, workspace->v->get_values(), inc, workspace->temp1->get_values(), inc);
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->v_apply_->copy_from(workspace->temp1.get());
+        auto precond_operator = static_cast<PrecondOperator<device, vtype_precond_apply, itype>*>(precond);
+        precond_operator->apply(context, MagmaNoTrans, workspace->v_apply_.get());
+        workspace->temp1->copy_from(workspace->v_apply_.get());
+    }
+    else {
+        auto precond_operator = static_cast<PrecondOperator<device, vtype, itype>*>(precond);
+        precond_operator->apply(context, MagmaNoTrans, workspace->temp1.get());
+    }
+    vtype one = 1.0;
+    vtype zero = 0.0;
+    vtype minus_one = -1.0;
+    auto queue = context->get_queue();
+    auto exec = context->get_executor();
+    //if (!std::is_same<vtype_internal, vtype>::value) {
+    //    workspace->u_in->copy_from(workspace->u.get());
+    //    workspace->v_in->copy_from(workspace->temp1.get());
+    //    auto t = static_cast<matrix::Dense<device, vtype_internal>*>(workspace->mtx_apply.get());
+    //    //t->apply((vtype_internal)one, workspace->v_in.get(), (vtype_internal)minus_one, workspace->u_in.get());
+    //    blas::gemv(context, MagmaNoTrans, num_rows, num_cols, (vtype_internal)one,
+    //        t->get_values(), t->get_ld(), workspace->v_in->get_values(),
+    //        1, (vtype_internal)minus_one, workspace->u_in->get_values(), 1);
+    //    workspace->u->copy_from(workspace->u_in.get());
+    //} else {
+        //mtx_in->apply(one, workspace->temp1.get(), minus_one, workspace->u.get());
+        blas::gemv(context, MagmaNoTrans, num_rows, num_cols, one,
+            mtx_in->get_values(), mtx_in->get_ld(), workspace->temp1->get_values(),
+            1, minus_one, workspace->u->get_values(), 1);
+        cudaDeviceSynchronize();
+    //}
+    workspace->beta = blas::norm2(context, num_rows, workspace->u->get_values(), 1);
+    blas::scale(context, num_rows, one / workspace->beta, workspace->u->get_values(), inc);
+    // Compute new v vector.
+    if (!std::is_same<vtype_internal, vtype>::value) {
+        workspace->u_in->copy_from(workspace->u.get());
+        workspace->v_in->copy_from(workspace->temp1.get());
+        auto t = static_cast<matrix::Dense<device, vtype_internal>*>(workspace->mtx_apply.get());
+        //t->transpose()->apply((vtype_internal)one, workspace->u_in.get(), (vtype_internal)zero, workspace->v_in.get());
+        blas::gemv(context, MagmaTrans, num_rows, num_cols, (vtype_internal)one,
+            t->get_values(), t->get_ld(), workspace->u_in->get_values(),
+            1, (vtype_internal)zero, workspace->v_in->get_values(), 1);
+        workspace->temp1->copy_from(workspace->v_in.get());
+    } else {
+        //mtx_in->transpose()->apply(one, workspace->u.get(), zero, workspace->temp1.get());
+        blas::gemv(context, MagmaTrans, num_rows, num_cols, one,
+            mtx_in->get_values(), mtx_in->get_ld(), workspace->u->get_values(),
+            1, zero, workspace->temp1->get_values(), 1);
+    }
+
+    if (!std::is_same<vtype_precond_apply, vtype>::value) {
+        workspace->v_apply_->copy_from(workspace->temp1.get());
+        auto precond_operator = static_cast<PrecondOperator<device, vtype_precond_apply, itype>*>(precond);
+        precond_operator->apply(context, MagmaTrans, workspace->v_apply_.get());
+        workspace->temp1->copy_from(workspace->v_apply_.get());
+    }
+    else {
+        auto precond_operator = static_cast<PrecondOperator<device, vtype, itype>*>(precond);
+        precond_operator->apply(context, MagmaTrans, workspace->temp1.get());
+    }
+    blas::axpy(context, num_cols, -(workspace->beta), workspace->v->get_values(), 1,
+               workspace->temp1->get_values(), 1);
+    workspace->alpha = blas::norm2(context, num_cols, workspace->temp1->get_values(), inc);
+    blas::scale(context, num_cols, 1 / workspace->alpha, workspace->temp1->get_values(), inc);
+    blas::copy(context, num_cols, workspace->temp1->get_values(), inc, workspace->v->get_values(), inc);
 }
 
 // Step 1 of preconditioned LSQR.
@@ -729,6 +849,56 @@ void step_2(std::shared_ptr<Context<device>> context,
             //PrecondOperator<device, vtype_precond_apply, itype>* precond,
             Preconditioner* precond,
             lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
+            matrix::Dense<device, vtype>* mtx_in,
+            matrix::Dense<device, vtype_refine>* sol_in)
+{
+std::cout << "_step_2_\n";
+    auto num_rows = mtx_in->get_size()[0];
+    auto num_cols = mtx_in->get_size()[1];
+    auto mtx = mtx_in->get_values();
+    auto sol = sol_in->get_values();
+    itype inc = 1;
+    vtype one = 1.0;
+    auto rho = std::sqrt(((workspace->rho_bar) * (workspace->rho_bar) +
+                          workspace->beta * workspace->beta));
+    auto c = (workspace->rho_bar) / rho;
+    auto s = workspace->beta / rho;
+    auto theta = s * workspace->alpha;
+    workspace->rho_bar = -c * workspace->alpha;
+    auto phi = c * (workspace->phi_bar);
+    workspace->phi_bar = s * (workspace->phi_bar);
+    if (!std::is_same<vtype, vtype_precond_apply>::value) {
+        workspace->v_apply_->copy_from(workspace->w.get());
+        auto precond_operator = static_cast<PrecondOperator<device, vtype_precond_apply, itype>*>(precond);
+        precond_operator->apply(context, MagmaNoTrans, workspace->v_apply_.get());
+        workspace->temp_refine_->copy_from(workspace->v_apply_.get());
+    }
+    else {
+        std::cout << "here\n";
+        blas::copy(context, num_cols, workspace->w->get_values(), inc, workspace->temp1->get_values(), inc);
+        auto precond_operator = static_cast<PrecondOperator<device, vtype, itype>*>(precond);
+        precond_operator->apply(context, MagmaNoTrans, workspace->temp1.get());
+        workspace->temp_refine_->copy_from(workspace->temp1.get());
+    }
+    blas::axpy(context, num_cols, static_cast<vtype_refine>(phi / rho), workspace->temp_refine_->get_values(), 1, sol, 1);
+    // Compute new vector w.
+    blas::scale(context, num_cols, -(theta / rho), workspace->w->get_values(), inc);
+    blas::axpy(context, num_cols, one, workspace->v->get_values(), 1, workspace->w->get_values(), 1);
+}
+
+template <ContextType device,
+          typename vtype,
+          typename vtype_internal,
+          typename vtype_precond_apply,
+          typename vtype_refine,
+          typename itype>
+void step_2(std::shared_ptr<Context<device>> context,
+            iterative::LsqrConfig< vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>*
+                config,
+            iterative::Logger* logger,
+            //PrecondOperator<device, vtype_precond_apply, itype>* precond,
+            Preconditioner* precond,
+            lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
             matrix::Sparse<device, vtype, itype>* mtx_in,
             matrix::Dense<device, vtype_refine>* sol_in)
 {
@@ -762,6 +932,104 @@ void step_2(std::shared_ptr<Context<device>> context,
     // Compute new vector w.
     blas::scale(context, num_cols, -(theta / rho), workspace->w->get_values(), inc);
     blas::axpy(context, num_cols, one, workspace->v->get_values(), 1, workspace->w->get_values(), 1);
+}
+
+template <ContextType device,
+          typename vtype,
+          typename vtype_internal,
+          typename vtype_precond_apply,
+          typename vtype_refine,
+          typename itype>
+bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
+                             iterative::LsqrConfig<vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* config,
+                             iterative::Logger* logger,
+                             lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
+                             matrix::Dense<device, vtype_refine>* mtx,
+                             matrix::Dense<device, vtype_refine>* sol,
+                             matrix::Dense<device, vtype_refine>* res)
+{
+    auto num_rows = mtx->get_size()[0];
+    auto num_cols = mtx->get_size()[1];
+    vtype_refine one = 1.0;
+    vtype_refine minus_one = -1.0;
+    mtx->apply(minus_one, sol, one, res);
+    itype inc = 1;
+    workspace->resnorm_previous = workspace->resnorm;
+    workspace->resnorm = blas::norm2(context, num_rows, res->get_values(), inc);
+    workspace->resnorm = workspace->resnorm / workspace->rhsnorm;
+
+    if (workspace->new_restart_active) {
+#if VISUALS
+        std::cout << workspace->completed_iterations << " / ";
+        std::cout << std::setprecision(15) << workspace->resnorm << " ";
+#endif
+
+        logger->set_relres_history(workspace->completed_iterations, workspace->resnorm);
+        double true_sol_norm = 0.0;
+        if (logger->record_true_error()) {
+            blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
+            blas::axpy(context, num_cols, minus_one, workspace->true_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
+            auto t = blas::norm2(context, num_cols, workspace->true_sol_->get_values(), 1);
+            true_sol_norm = t;
+            auto true_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
+            std::cout << "** true_error: " << true_error << " ";
+            logger->set_true_error_history(workspace->completed_iterations, true_error);  // @error
+        }
+        if (logger->record_noisy_error() && logger->record_true_error()) {
+            blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
+            blas::axpy(context, num_cols, minus_one, workspace->noisy_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
+            auto noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/true_sol_norm;
+            std::cout << ", noisy_error: " << noisy_error << " ";
+            logger->set_noisy_error_history(workspace->completed_iterations, noisy_error);  // @error
+            auto t0 = blas::norm2(context, num_cols, workspace->true_sol_->get_values(), 1);
+            auto t1 = blas::norm2(context, num_cols, workspace->noisy_sol_->get_values(), 1);
+            auto t2 = blas::norm2(context, num_cols, sol->get_values(), 1);
+            auto similarity_t = blas::dot(context, num_cols, workspace->true_sol_->get_values(), 1,
+               sol->get_values(), 1);
+            similarity_t = similarity_t / (t0*t2);
+            auto similarity_n = blas::dot(context, num_cols, sol->get_values(), 1,
+               workspace->noisy_sol_->get_values(), 1);
+            similarity_n = similarity_n / (t2*t1);
+            logger->set_similarity_history(workspace->completed_iterations, similarity_t, similarity_n);
+        }
+        else if (logger->record_noisy_error()) {
+            blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
+            blas::axpy(context, num_cols, minus_one, workspace->noisy_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
+            auto t = blas::norm2(context, num_cols, workspace->noisy_sol_->get_values(), 1);
+            auto noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
+            logger->set_noisy_error_history(workspace->completed_iterations, noisy_error);  // @error
+        }
+#if VISUALS
+    std::cout << "\n";
+#endif
+    }
+    else
+    {
+        std::cout << "**** "; 
+        std::cout << workspace->completed_iterations << " / ";
+        std::cout << std::setprecision(15) << workspace->resnorm << '\n';
+    }
+    auto stagnation_index = workspace->compute_stagnation_index();
+    auto stagnates =
+    (workspace->solver_stagnates(stagnation_index, config->get_stagnation_tolerance(),
+        workspace->resnorm_previous)
+            && workspace->new_restart_active
+            && (workspace->completed_iterations_per_restart >= config->get_min_iterations()));
+    if ((logger->record_stagnation()) && (workspace->new_restart_active)) {
+        logger->set_stagnation_history(workspace->completed_iterations,
+            stagnation_index / workspace->resnorm_previous);
+    }
+    //std::cout << "stagnates: " << workspace->solver_stagnates(stagnation_index, config->get_stagnation_tolerance(),
+    //    workspace->resnorm_previous) << '\n';
+    if ((workspace->completed_iterations_per_restart >= config->get_iterations())
+        || (workspace->resnorm < config->get_tolerance())
+        || stagnates) {
+        return true;
+    }
+    else {
+        return false;
+    }
+    return true;
 }
 
 template <ContextType device,
@@ -855,6 +1123,103 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
     }
     return true;
 }
+
+template <ContextType device,
+          typename vtype,
+          typename vtype_internal,
+          typename vtype_precond_apply,
+          typename vtype_refine,
+          typename itype>
+void run_lsqr(std::shared_ptr<Context<device>> context,
+              iterative::LsqrConfig<
+                  vtype, vtype_internal,
+                  vtype_precond_apply, vtype_refine, itype>*
+                  config,
+              iterative::Logger* logger,
+              PrecondOperator<device, vtype_precond_apply,
+                                     itype>* precond,
+              lsqr::Workspace<device, vtype, vtype_internal,
+                             vtype_precond_apply, vtype_refine, itype>* workspace,
+              matrix::Dense<device, vtype_refine>* mtx_refine,
+              matrix::Dense<device, vtype_refine>* rhs_refine,
+              matrix::Dense<device, vtype_refine>* sol_refine)
+{
+std::cout << "in run_lsqr\n";
+    auto mtx = static_cast<matrix::Dense<device, vtype>*>(workspace->mtx_.get());
+    auto res = workspace->res_.get();
+    auto rhs = workspace->rhs_refine_.get();
+    auto res_refine = workspace->res_refine_.get();
+    workspace->completed_iterations_per_restart = 0;
+    if (check_stopping_criteria(context, config, logger, workspace, mtx_refine, sol_refine, res_refine)) {
+        return;
+    }
+    workspace->new_restart_active = true;
+// working here.
+    initialize(context, config, logger, precond, workspace, mtx, res);
+    while (1) {
+        step_1(context, config, logger, precond, workspace, mtx);
+        step_2(context, config, logger, precond, workspace, mtx, sol_refine);
+        res_refine->copy_from(rhs);
+        if (check_stopping_criteria(context, config, logger, workspace, mtx_refine,
+            sol_refine, res_refine)) {
+            workspace->new_restart_active = false;
+            workspace->completed_iterations += 1;
+            workspace->completed_restarts += 1;
+            workspace->completed_iterations_per_restart = 1;
+            res->copy_from(res_refine);
+            break;
+        }
+        workspace->completed_iterations += 1;
+        workspace->completed_iterations_per_restart += 1;
+    }
+    logger->set_completed_iterations(workspace->completed_iterations);
+}
+
+template void run_lsqr(std::shared_ptr<Context<CUDA>> context,
+              iterative::LsqrConfig<double, double, double, double, magma_int_t>* config,
+              iterative::Logger* logger,
+              PrecondOperator<CUDA, double, magma_int_t>* precond,
+              lsqr::Workspace<CUDA, double, double, double, double, magma_int_t>* workspace,
+              matrix::Dense<CUDA, double>* mtx,
+              matrix::Dense<CUDA, double>* rhs,
+              matrix::Dense<CUDA, double>* sol);
+
+//template
+//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
+//              iterative::Logger logger,
+//              PrecondOperator<CUDA, float, magma_int_t>* precond,
+//              lsqr::Workspace<double, float, float, magma_int_t>* workspace,
+//              matrix::Dense<CUDA, double>* mtx,
+//              matrix::Dense<CUDA, double>* rhs,
+//              matrix::Dense<CUDA, double>* sol);
+//
+//template
+//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
+//              iterative::Logger logger,
+//              PrecondOperator<CUDA, __half, magma_int_t>* precond,
+//              lsqr::Workspace<double, __half, __half, magma_int_t>* workspace,
+//              matrix::Dense<CUDA, double>* mtx,
+//              matrix::Dense<CUDA, double>* rhs,
+//              matrix::Dense<CUDA, double>* sol);
+//
+//template
+//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
+//              iterative::Logger logger,
+//              PrecondOperator<CUDA, float, magma_int_t>* precond,
+//              lsqr::Workspace<float, float, float, magma_int_t>* workspace,
+//              matrix::Dense<CUDA, float>* mtx,
+//              matrix::Dense<CUDA, float>* rhs,
+//              matrix::Dense<CUDA, float>* sol);
+//
+//template
+//void run_lsqr(std::shared_ptr<Context<CUDA>> context,
+//              iterative::Logger logger,
+//              PrecondOperator<CUDA, __half, magma_int_t>* precond,
+//              lsqr::Workspace<float, __half, __half, magma_int_t>* workspace,
+//              matrix::Dense<CUDA, float>* mtx,
+//              matrix::Dense<CUDA, float>* rhs,
+//              matrix::Dense<CUDA, float>* sol);
+//
 
 
 template <ContextType device,
