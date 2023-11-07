@@ -321,6 +321,9 @@ __global__ void convert_kernel(index_type num_rows, index_type num_cols,
     auto col = blockIdx.y * blockDim.y + threadIdx.y;
     if ((row < num_rows) && (col < num_cols)) {
         mtx_out[row + ld_out * col] = (mtx_in[row + ld_in * col]);
+        if (isnan(mtx_out[row + ld_out * col])) {
+            printf("-----> nan\n");
+        }
     }
 }
 

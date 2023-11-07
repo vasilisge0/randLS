@@ -484,9 +484,7 @@ void step_2(std::shared_ptr<Context<device>> context,
     auto phi = c * (workspace->phi_bar);
     workspace->phi_bar = s * (workspace->phi_bar);
     blas::copy(context, num_cols, workspace->w->get_values(), inc, workspace->temp1->get_values(), inc);
-    std::cout << "_step_2_\n";
     if (!std::is_same<vtype_precond_apply, vtype>::value) {
-        std::cout << "--->\n";
         workspace->u_apply_->copy_from(workspace->temp1.get());
         precond->apply(context, MagmaNoTrans, workspace->u_apply_.get());
         workspace->temp1->copy_from(workspace->u_apply_.get());
@@ -682,7 +680,6 @@ void step_1(std::shared_ptr<Context<device>> context,
             lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>* workspace,
             matrix::Dense<device, vtype>* mtx_in)
 {
-std::cout << "_step_1_\n";
     auto num_rows = mtx_in->get_size()[0];
     auto num_cols = mtx_in->get_size()[1];
     auto mtx = mtx_in->get_values();
@@ -706,22 +703,22 @@ std::cout << "_step_1_\n";
     vtype minus_one = -1.0;
     auto queue = context->get_queue();
     auto exec = context->get_executor();
-    //if (!std::is_same<vtype_internal, vtype>::value) {
-    //    workspace->u_in->copy_from(workspace->u.get());
-    //    workspace->v_in->copy_from(workspace->temp1.get());
-    //    auto t = static_cast<matrix::Dense<device, vtype_internal>*>(workspace->mtx_apply.get());
-    //    //t->apply((vtype_internal)one, workspace->v_in.get(), (vtype_internal)minus_one, workspace->u_in.get());
-    //    blas::gemv(context, MagmaNoTrans, num_rows, num_cols, (vtype_internal)one,
-    //        t->get_values(), t->get_ld(), workspace->v_in->get_values(),
-    //        1, (vtype_internal)minus_one, workspace->u_in->get_values(), 1);
-    //    workspace->u->copy_from(workspace->u_in.get());
-    //} else {
+    if (!std::is_same<vtype_internal, vtype>::value) {
+        workspace->u_in->copy_from(workspace->u.get());
+        workspace->v_in->copy_from(workspace->temp1.get());
+        auto t = static_cast<matrix::Dense<device, vtype_internal>*>(workspace->mtx_apply.get());
+        //t->apply((vtype_internal)one, workspace->v_in.get(), (vtype_internal)minus_one, workspace->u_in.get());
+        blas::gemv(context, MagmaNoTrans, num_rows, num_cols, (vtype_internal)one,
+            t->get_values(), t->get_ld(), workspace->v_in->get_values(),
+            1, (vtype_internal)minus_one, workspace->u_in->get_values(), 1);
+        workspace->u->copy_from(workspace->u_in.get());
+    } else {
         //mtx_in->apply(one, workspace->temp1.get(), minus_one, workspace->u.get());
         blas::gemv(context, MagmaNoTrans, num_rows, num_cols, one,
             mtx_in->get_values(), mtx_in->get_ld(), workspace->temp1->get_values(),
             1, minus_one, workspace->u->get_values(), 1);
         cudaDeviceSynchronize();
-    //}
+    }
     workspace->beta = blas::norm2(context, num_rows, workspace->u->get_values(), 1);
     blas::scale(context, num_rows, one / workspace->beta, workspace->u->get_values(), inc);
     // Compute new v vector.
@@ -852,7 +849,6 @@ void step_2(std::shared_ptr<Context<device>> context,
             matrix::Dense<device, vtype>* mtx_in,
             matrix::Dense<device, vtype_refine>* sol_in)
 {
-std::cout << "_step_2_\n";
     auto num_rows = mtx_in->get_size()[0];
     auto num_cols = mtx_in->get_size()[1];
     auto mtx = mtx_in->get_values();
@@ -874,7 +870,6 @@ std::cout << "_step_2_\n";
         workspace->temp_refine_->copy_from(workspace->v_apply_.get());
     }
     else {
-        std::cout << "here\n";
         blas::copy(context, num_cols, workspace->w->get_values(), inc, workspace->temp1->get_values(), inc);
         auto precond_operator = static_cast<PrecondOperator<device, vtype, itype>*>(precond);
         precond_operator->apply(context, MagmaNoTrans, workspace->temp1.get());

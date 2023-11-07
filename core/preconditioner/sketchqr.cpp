@@ -28,7 +28,9 @@ int sketch_qr_impl(
     auto num_rows_sketch = state->sketched_mtx->get_size()[0];
     auto num_cols_mtx = state->sketched_mtx->get_size()[1];
     auto ld_r_factor = state->sketched_mtx->get_ld();
+    std::cout << "before apply\n";
     sketch->apply(state->mtx, state->sketched_mtx); // Copy to state->mtx outside of sketch_qr_impl.
+    std::cout << "after apply\n";
     index_type info_qr = 0;
     precond_mtx->copy_from(state->sketched_mtx.get());
     blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
@@ -36,6 +38,10 @@ int sketch_qr_impl(
                  state->tau->get_values(), &info_qr);
     dim2 s = {ld_r_factor, num_cols_mtx};
     cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
+    auto queue = context->get_queue();
+    std::cout << "\n\n\nprecond:\n";
+    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
+    std::cout << "\n\n\n\n";
     return info_qr;
 }
 
@@ -113,7 +119,9 @@ template <ContextType device, typename vtype,
 void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::generate()
 {
     //@error here
+    std::cout << "before sketch_qr_impl\n";
     auto info_qr = sketch_qr_impl(context_, sketch_, mtx_, precond_mtx_, state_);
+    std::cout << "after sketch_qr_impl\n";
     if (info_qr != 0) {
         magma_xerbla("geqrf2_gpu", info_qr);
     }
@@ -121,8 +129,8 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::g
     blas::trtri(context_, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
     auto queue = context_->get_queue();
-    io::write_mtx("precond_hgdp.mtx", precond_mtx_->get_size()[0], precond_mtx_->get_size()[1],
-        (double*)precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
+    //io::write_mtx("precond_hgdp.mtx", precond_mtx_->get_size()[0], precond_mtx_->get_size()[1],
+    //    (double*)precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
     precond_mtx_apply_->copy_from(precond_mtx_.get());
 }
 
@@ -175,7 +183,11 @@ std::cout << "in sketchqr constructor\n";
     sketch_ = sketch;
     this->precond_mtx_ = matrix::Dense<device, vtype>::create(context_, dim2(sketch->get_size()[0], mtx->get_size()[1]));
     this->precond_mtx_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context_, {sketch->get_size()[0], mtx->get_size()[1]});
+    std::cout << "before generate\n";
     generate();
+    std::cout << "after generate\n";
+    auto queue = context_->get_queue();
+    io::print_mtx_gpu(6, 6, precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
 }
 
 template <ContextType device, typename vtype,

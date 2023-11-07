@@ -37,9 +37,33 @@ template<> void read_mtx_values(std::shared_ptr<Context<CUDA>> context, char* fi
 
 void write_mtx();
 
-void write_mtx(const char* filename, magma_int_t m, magma_int_t n, double* mtx);
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols,
+    magma_int_t* dmtx, magma_int_t ld);
 
-void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld, magma_queue_t queue);
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols,
+    double* dmtx, magma_int_t ld);
+
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, __half* dmtx);
+
+//void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols,
+//    float* dmtx, magma_int_t ld);
+
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, double* dmtx);
+
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, float* dmtx);
+
+//
+//void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t* dmtx, magma_int_t ld, magma_queue_t queue);
+//
+//void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld, magma_queue_t queue);
+
+//void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld, magma_queue_t queue);
+
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, double* mtx, magma_int_t ld);
+
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, float* mtx, magma_int_t ld);
+
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, magma_int_t* mtx, magma_int_t ld);
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx);
 
@@ -49,7 +73,12 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx, mag
 
 void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld, magma_queue_t queue);
 
+void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld, magma_queue_t queue);
+
 void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, int* dmtx, magma_int_t ld, magma_queue_t queue);
+
+template<ContextType device_type>
+void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld);
 
 void write_output(const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t max_iter,
     double sampling_coeff, magma_int_t sampled_rows, double t_precond, double t_solve, double t_total,

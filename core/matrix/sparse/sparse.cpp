@@ -220,8 +220,36 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
         {alpha}, exec);
     auto beta_mtx = gko::initialize<gko::matrix::Dense<value_type>>(
         {beta}, exec);
-    static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get())->apply(alpha_mtx.get(), static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx()), beta_mtx.get(),
-        static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx()));
+    cudaDeviceSynchronize();
+    auto t0 = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get());
+    auto t1 = static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx());
+    auto t2 = static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx());
+    t0->apply(alpha_mtx.get(), t1, beta_mtx.get(), t2);
+    //static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get())->apply(alpha_mtx.get(), static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx()), beta_mtx.get(),
+    //    static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx()));
+    //cudaDeviceSynchronize();
+
+    //auto t = static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx());
+    auto t = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get());
+    {
+        auto queue = context->get_queue();
+        std::cout << "result->get_ld(): " << result->get_ld() << '\n';
+        std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
+        //io::write_mtx("S8.mtx", result->get_size()[0], result->get_size()[1],
+        //    (float*)result->get_values(), result->get_ld(), queue);
+        //io::write_mtx("S8.mtx", t->get_size()[0], t->get_size()[1],
+        //    (float*)t->get_values(), t->get_size()[0], queue);
+        //io::write_mtx("S8.mtx", this->get_nnz(), 1,
+        //    (float*)t->get_values(), this->get_nnz(), queue);
+        //std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
+        std::cout << "<-t2->\n";
+        std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << '\n';
+        std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
+        //io::write_mtx("S2.mtx", t2->get_size()[0], t2->get_size()[1],
+        //    (float*)t2->get_values(), t2->get_size()[0], queue);
+        //io::write_mtx("S2.mtx", t2->get_size()[0]*t2->get_size()[1], 1,
+        //    (float*)t2->get_values(), t2->get_size()[0]*t2->get_size()[1], queue);
+    }
 }
 
 template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dense<rls::CUDA, half>* rhs, __half beta, Dense<rls::CUDA, __half>* result)
@@ -385,9 +413,11 @@ template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Contex
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
-Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context, std::shared_ptr<gko::LinOp> mtx) : Mtx<device_type>(context)
+Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context,
+    std::shared_ptr<gko::LinOp> mtx) : Mtx<device_type>(context)
 {
-    this->mtx_ = std::shared_ptr<gko::LinOp>(mtx);
+    //this->mtx_ = std::shared_ptr<gko::LinOp>(mtx);
+    this->mtx_ = mtx;
     auto exec = context->get_executor();
     //this->nnz_ = exec->copy_val_to_host(&static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx.get())->get_row_ptrs()[mtx->get_size()[0]]);
     this->nnz_ = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx.get())->get_num_stored_elements();
@@ -513,6 +543,16 @@ template<ContextType device_type, typename value_type, typename index_type>
 std::unique_ptr<Sparse<device_type, value_type, index_type>> Sparse<device_type, value_type, index_type>::transpose()
 {
     std::shared_ptr<gko::LinOp> mtx = static_cast<gko::matrix::Csr<value_type, index_type>*>(this->mtx_.get())->transpose();
+    auto T = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx.get());
+    auto context = this->get_context();
+    auto queue = context->get_queue();
+    std::cout << "sizeof(T->get_values()): " << sizeof(T->get_values()) << '\n';
+    std::cout << "before writting S1\n";
+    //io::write_mtx("S1.mtx", this->get_nnz(), 1,
+    //    (double*)T->get_values(), this->get_nnz(), queue);
+    //io::write_mtx("S11.mtx", this->get_nnz(), 1,
+    //    (float*)T->get_values(), this->get_nnz(), queue);
+
     return Sparse::create(this->get_context(), mtx);
 }
 

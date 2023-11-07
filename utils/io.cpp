@@ -24,6 +24,7 @@ void read_mtx_size(char* filename, magma_int_t* m, magma_int_t* n) {
     mm_read_banner(file_handle, &matcode);
     mm_read_mtx_array_size(file_handle, m, n);
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, double* mtx) {
@@ -40,6 +41,7 @@ void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, double* mtx) 
         }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 template <typename value_type, ContextType device_type>
@@ -58,6 +60,7 @@ template<> void read_mtx_values<double, CPU>(std::shared_ptr<Context<CPU>> conte
        }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 template <>
@@ -74,6 +77,7 @@ void read_mtx_values<float, CPU>(std::shared_ptr<Context<CPU>> context, char* fi
         }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 template <>
@@ -121,13 +125,14 @@ void read_mtx_values(char* filename, magma_int_t m, magma_int_t n, float* mtx) {
         }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 void write_mtx() {
     std::cout << "TEST\n";
 }
 
-void write_mtx(const char* filename, magma_int_t m, magma_int_t n, double* mtx) {
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, magma_int_t* mtx, magma_int_t ld) {
     MM_typecode matcode;
     mm_initialize_typecode(&matcode);
     mm_set_matrix(&matcode);
@@ -141,12 +146,35 @@ void write_mtx(const char* filename, magma_int_t m, magma_int_t n, double* mtx) 
         for (int i = 0; i < m; ++i) {
             //std::cout << mtx[i + j * m] << '\n';
             //fprintf(file_handle, "%lf\n", mtx[i + j * m]);
-            fprintf(file_handle, "%1.16e\n", mtx[i + j * m]);
+            fprintf(file_handle, "%d\n", mtx[i + j * ld]);
         }
     }
+    fclose(file_handle);
+    fflush(file_handle);
 }
 
-void write_mtx(const char* filename, magma_int_t m, magma_int_t n, float* mtx) {
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, double* mtx, magma_int_t ld) {
+    MM_typecode matcode;
+    mm_initialize_typecode(&matcode);
+    mm_set_matrix(&matcode);
+    mm_set_array(&matcode);
+    mm_set_real(&matcode);
+    FILE* file_handle = fopen(filename, "w");
+    mm_write_banner(file_handle, matcode);
+    mm_write_mtx_array_size(file_handle, m, n);
+    //std::cout << "m: " << m << ", n: " << n << '\n';
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < m; ++i) {
+            //std::cout << mtx[i + j * m] << '\n';
+            //fprintf(file_handle, "%lf\n", mtx[i + j * m]);
+            fprintf(file_handle, "%1.16e\n", mtx[i + j * ld]);
+        }
+    }
+    fclose(file_handle);
+    fflush(file_handle);
+}
+
+void write_mtx_cpu(const char* filename, magma_int_t m, magma_int_t n, float* mtx, magma_int_t ld) {
     std::cout << "in write_mtx\n";
     MM_typecode matcode;
     mm_initialize_typecode(&matcode);
@@ -156,12 +184,23 @@ void write_mtx(const char* filename, magma_int_t m, magma_int_t n, float* mtx) {
     FILE* file_handle = fopen(filename, "w");
     mm_write_banner(file_handle, matcode);
     mm_write_mtx_array_size(file_handle, m, n);
+    int count = 0;
     for (int j = 0; j < n; ++j) {
         for (int i = 0; i < m; ++i) {
-            // fprintf(file_handle, "%lf\n", mtx[i + j * m]);
-            fprintf(file_handle, "%1.16e\n", mtx[i + j * m]);
+            //fprintf(file_handle, "%f\n", mtx[i + j * ld]);
+            if(isnan(mtx[i + j * ld]))
+            {
+                printf("---> isnan (i: %d, j: %d) / index: %d / ld: %d => %f\n", i, j, i + j * ld, ld, mtx[i + j * ld]);
+            }
+            fprintf(file_handle, "%1.16e\n", (double)mtx[i + j * ld]);
+            //fprintf(file_handle, "%1.1e\n", (double)mtx[i + j * ld]);
+            //fprintf(file_handle, "%d\n", count);
+            count += 1;
         }
     }
+    printf("count: %d\n", count);
+    fclose(file_handle);
+    fflush(file_handle);
 }
 
 void print_mtx(magma_int_t m, magma_int_t n, double* mtx) {
@@ -317,6 +356,12 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx,
     magma_free_cpu(t);
 }
 
+template<ContextType device_type>
+void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld)
+{
+
+}
+
 void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, float* dmtx,
     magma_int_t ld, magma_queue_t queue)
 {
@@ -350,21 +395,77 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, int* dmtx,
     magma_free_cpu(t);
 }
 
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t* dmtx, magma_int_t ld) {
+    magma_int_t* t;
+    auto context_ref = rls::share(Context<rls::CPU>::create());
+    auto T = matrix::Dense<rls::CPU, magma_int_t>::create(context_ref, dim2(num_rows, num_cols));
+    auto queue = context->get_queue();
+    auto exec_ref = context_ref->get_executor();
+    magma_igetmatrix(num_rows, num_cols, dmtx, ld,
+                     T->get_values(), ld, queue);
+    write_mtx_cpu(filename, num_rows, num_cols, t, ld);
+}
+
+//void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld) {
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, double* dmtx) {
+    magma_int_t* t;
+    auto context_ref = rls::share(Context<rls::CPU>::create());
+    auto T = matrix::Dense<rls::CPU, double>::create(context_ref, dim2(nnz, 1));
+    T->zeros();
+    auto queue = context->get_queue();
+    auto exec = context->get_executor();
+    auto exec_ref = context_ref->get_executor();
+    //exec_ref->copy_from(exec, nnz, dmtx, T->get_values());
+    exec_ref->copy_from(exec, nnz, dmtx, T->get_values());
+    cudaDeviceSynchronize();
+    write_mtx_cpu(filename, nnz, 1, T->get_values(), nnz);
+}
+
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, __half* dmtx) {
+
+}
+
+void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t nnz, float* dmtx) {
+    magma_int_t* t;
+    auto context_ref = rls::share(Context<rls::CPU>::create());
+    auto T = matrix::Dense<rls::CPU, float>::create(context_ref, dim2(nnz, 1));
+    T->zeros();
+    auto queue = context->get_queue();
+    auto exec = context->get_executor();
+    auto exec_ref = context_ref->get_executor();
+    //exec_ref->copy_from(exec, nnz, dmtx, T->get_values());
+    exec_ref->copy_from(exec, nnz, dmtx, T->get_values());
+    cudaDeviceSynchronize();
+    write_mtx_cpu(filename, nnz, 1, T->get_values(), nnz);
+}
+
+void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t* dmtx, magma_int_t ld, magma_queue_t queue) {
+    magma_int_t* t;
+    auto err = magma_malloc_cpu((void**)&t, num_rows * num_cols * sizeof(magma_int_t));
+    magma_igetmatrix(num_rows, num_cols, dmtx, ld,
+                     t, ld, queue);
+    write_mtx_cpu(filename, num_rows, num_cols, t, ld);
+    magma_free_cpu(t);
+}
+
 void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld, magma_queue_t queue) {
     double* t;
     auto err = magma_malloc_cpu((void**)&t, num_rows * num_cols * sizeof(double));
     magma_dgetmatrix(num_rows, num_cols, dmtx, ld,
-                     t, num_rows, queue);
-    write_mtx(filename, num_rows, num_cols, t);
+                     t, ld, queue);
+    write_mtx_cpu(filename, num_rows, num_cols, t, ld);
     magma_free_cpu(t);
 }
 
 void write_mtx(const char* filename, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld, magma_queue_t queue) {
+std::cout << "in float write\n";
     float* t;
     magma_malloc_cpu((void**)&t, num_rows * num_cols * sizeof(float));
+    cudaDeviceSynchronize();
     magma_sgetmatrix(num_rows, num_cols, dmtx, ld,
-              t, num_rows, queue);
-    write_mtx(filename, num_rows, num_cols, t);
+              t, ld, queue);
+    cudaDeviceSynchronize();
+    write_mtx_cpu(filename, num_rows, num_cols, t, ld);
     magma_free_cpu(t);
 }
 
@@ -383,6 +484,7 @@ void write_output(const char* filename, magma_int_t num_rows, magma_int_t num_co
     fprintf(file_handle, "%d\n", iter);
     fprintf(file_handle, "%lf\n", relres);
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 
@@ -404,6 +506,7 @@ template<> void read_mtx_values<double, CPU>(std::shared_ptr<Context<CPU>> conte
        }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 template <>
@@ -420,6 +523,7 @@ void read_mtx_values<float, CPU>(std::shared_ptr<Context<CPU>> context, char* fi
         }
     }
     fclose(file_handle);
+    fflush(file_handle);
 }
 
 template <>

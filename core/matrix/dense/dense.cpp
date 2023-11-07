@@ -175,7 +175,6 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
     else if (std::is_same<value_type, float>::value) {
         io::read_mtx_values<value_type, device_type>(Mtx<device_type>::get_context(),
             (char*)filename_mtx.c_str(), this->size_, this->values_);
-
     }
 }
 
@@ -206,6 +205,8 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
     alloc_elems = size[0] * size[1];
     this->size_ = size;
     this->ld_ = size[0];
+    std::cout << "this point\n";
+    values = nullptr;
 }
 
 template <ContextType device_type, typename value_type>
@@ -341,6 +342,8 @@ void Dense<device_type, value_type>::copy_from(matrix::Dense<device_type, value_
     auto a = mtx->get_context();
     this->set_context(mtx->get_context());
     this->size_ = mtx->get_size();
+    std::cout << "this->ld_: " << this->ld_ << '\n';
+    std::cout << "mtx->get_ld(): " << mtx->get_ld() << '\n';
     this->ld_   = mtx->get_ld();
     if ((this->alloc_elems == 0) && (this->values_ == nullptr)){
       this->malloc();
@@ -377,7 +380,14 @@ std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::
         s = dim2(this->size_[1], this->size_[0]);
         cuda::transpose(this->size_[0], this->size_[1], values_, this->size_[0], v, this->size_[1]);
     }
-    return Dense::create(c, s, std::move(v));
+    auto out = Dense::create(c, s);
+    auto exec = c->get_executor();
+
+    // you need to change this to take half arguments.
+    exec->copy(out->get_size()[0] * out->get_size()[1], v, out->get_values());
+    return out;
+    //auto out Dense::create(c, s, std::move(v));
+    //return Dense::create(c, s);
 }
 
 template <ContextType device_type, typename value_type>
