@@ -28,20 +28,60 @@ int sketch_qr_impl(
     auto num_rows_sketch = state->sketched_mtx->get_size()[0];
     auto num_cols_mtx = state->sketched_mtx->get_size()[1];
     auto ld_r_factor = state->sketched_mtx->get_ld();
-    std::cout << "before apply\n";
+
+
     sketch->apply(state->mtx, state->sketched_mtx); // Copy to state->mtx outside of sketch_qr_impl.
-    std::cout << "after apply\n";
     index_type info_qr = 0;
-    precond_mtx->copy_from(state->sketched_mtx.get());
-    blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
-                 precond_mtx->get_values(), ld_r_factor,
-                 state->tau->get_values(), &info_qr);
-    dim2 s = {ld_r_factor, num_cols_mtx};
-    cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
-    auto queue = context->get_queue();
-    std::cout << "\n\n\nprecond:\n";
-    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
-    std::cout << "\n\n\n\n";
+    //precond_mtx->copy_from(state->sketched_mtx.get());
+
+
+    //{
+    //    auto queue = context->get_queue();
+
+    //std::cout << "after copy\n";
+    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1],
+    //    state->sketched_mtx->get_values(), precond_mtx->get_ld());
+    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1],
+    //    precond_mtx->get_values(), precond_mtx->get_ld());
+
+    //    std::cout << "\n\n\nbefore qr:\n";
+    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
+    //    //io::write_mtx_gpu(context, "Sprecon.mtx", precond_mtx->get_size()[0]*precond_mtx->get_size()[1], precond_mtx->get_values());
+    //    std::cout << "state->sketched_mtx->get_size()[0]: " << state->sketched_mtx->get_size()[0] << '\n';
+    //    //io::scan_for_nan_gpu(context, state->sketched_mtx->get_size()[0], state->sketched_mtx->get_size()[1], state->sketched_mtx->get_values(), state->sketched_mtx->get_ld());
+    //    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
+    //    std::cout << "precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << "\n";
+    //    std::cout << "precond_mtx->get_ld(): " << precond_mtx->get_ld() << "\n";
+    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], 3, precond_mtx->get_values(), precond_mtx->get_ld());
+    //}
+
+    //blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
+    //             precond_mtx->get_values(), ld_r_factor,
+    //             state->tau->get_values(), &info_qr);
+    //std::cout << "info_qr: " << info_qr << '\n';
+    //{
+    //    auto queue = context->get_queue();
+
+    //    //std::cout << "tau: \n";
+    //    //io::scan_for_nan_gpu(context, state->tau->get_ld(), 1, state->tau->get_values(), state->tau->get_ld());
+
+    //    std::cout << "\n\n\nafter qr:\n";
+    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
+    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
+
+    //    std::cout << "ld_r_factor: " << ld_r_factor << '\n';
+    //    std::cout <<" num_rows_sketch: " << num_rows_sketch << '\n';
+    //}
+    //dim2 s = {ld_r_factor, num_cols_mtx};
+    //cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
+    //std::cout << "\n\n\nprecond:\n";
+    //{
+    //    auto queue = context->get_queue();
+    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
+
+    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
+    //}
+    //std::cout << "\n\n\n\n";
     return info_qr;
 }
 
@@ -128,9 +168,6 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::g
     //@error here
     blas::trtri(context_, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
-    auto queue = context_->get_queue();
-    //io::write_mtx("precond_hgdp.mtx", precond_mtx_->get_size()[0], precond_mtx_->get_size()[1],
-    //    (double*)precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
     precond_mtx_apply_->copy_from(precond_mtx_.get());
 }
 
@@ -170,7 +207,6 @@ SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::Sketch
         std::shared_ptr<SketchQrConfig<vtype, vtype_internal, vtype_precond_apply, index_type>>
             config) : PrecondOperator<device, vtype_precond_apply, index_type>(mtx)
 {
-std::cout << "in sketchqr constructor\n";
     context_ = mtx->get_context();
     mtx_ = mtx;
     config_ = config;
@@ -183,11 +219,7 @@ std::cout << "in sketchqr constructor\n";
     sketch_ = sketch;
     this->precond_mtx_ = matrix::Dense<device, vtype>::create(context_, dim2(sketch->get_size()[0], mtx->get_size()[1]));
     this->precond_mtx_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context_, {sketch->get_size()[0], mtx->get_size()[1]});
-    std::cout << "before generate\n";
     generate();
-    std::cout << "after generate\n";
-    auto queue = context_->get_queue();
-    io::print_mtx_gpu(6, 6, precond_mtx_->get_values(), precond_mtx_->get_ld(), queue);
 }
 
 template <ContextType device, typename vtype,

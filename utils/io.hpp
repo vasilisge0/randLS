@@ -37,6 +37,15 @@ template<> void read_mtx_values(std::shared_ptr<Context<CUDA>> context, char* fi
 
 void write_mtx();
 
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld);
+
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld);
+
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld);
+
 void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols,
     magma_int_t* dmtx, magma_int_t ld);
 

@@ -342,8 +342,6 @@ void Dense<device_type, value_type>::copy_from(matrix::Dense<device_type, value_
     auto a = mtx->get_context();
     this->set_context(mtx->get_context());
     this->size_ = mtx->get_size();
-    std::cout << "this->ld_: " << this->ld_ << '\n';
-    std::cout << "mtx->get_ld(): " << mtx->get_ld() << '\n';
     this->ld_   = mtx->get_ld();
     if ((this->alloc_elems == 0) && (this->values_ == nullptr)){
       this->malloc();
@@ -389,6 +387,15 @@ std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::
     //auto out Dense::create(c, s, std::move(v));
     //return Dense::create(c, s);
 }
+
+//template <ContextType device_type, typename value_type>
+//std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::transpose_in_place()
+//{
+//    auto mtx = gko::matrix::Dense<double>::create(
+//        exec, gko::dim<2>(size[0], size[1]),
+//        gko::make_array_view(exec, size[0]*size[1],
+//                         (double*)values), 1);
+//}
 
 template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::row_to_col_order()

@@ -332,6 +332,73 @@ void print_nnz_gpu(magma_int_t nnz, int* dmtx, magma_queue_t queue)
 }
 
 
+void scan_for_nan(magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld)
+{
+    bool found_nan = false;
+    for (auto r = 0; r < num_rows; r++) {
+        for (auto c = 0; c < num_cols; c++) {
+            if (isnan(dmtx[r*num_cols + c])) {
+                found_nan = true;
+                printf("NaN in position (%d, %d)\n", r, c);
+                return;
+            }
+        }
+    }
+    printf("0 NaNs found\n");
+}
+
+void scan_for_nan(magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld)
+{
+    std::cout << "num_rows: " << num_rows << ", num_cols: " << num_cols << '\n';
+    bool found_nan = false;
+    for (auto r = 0; r < num_rows; r++) {
+        for (auto c = 0; c < num_cols; c++) {
+            if (isnan(dmtx[r*num_cols + c])) {
+                found_nan = true;
+                printf("NaN in position (%d, %d)\n", r, c);
+                return;
+            }
+        }
+    }
+    printf("0 NaNs found\n");
+}
+
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld)
+{
+    //double* t;
+    auto queue = context->get_queue();
+    //magma_malloc_cpu((void**)&t, ld * num_cols * sizeof(double));
+    auto t = matrix::Dense<device_type, double>::create(context, dim2(num_rows, num_cols));
+    //magma_dgetmatrix(num_rows, num_cols, dmtx, ld,
+    //         t, ld, queue);
+    auto exec = context->get_executor();
+    //exec->copy(ld, dmtx, t->get_values());
+    exec->copy(num_rows*num_cols, dmtx, t->get_values());
+    scan_for_nan(num_rows, num_cols, t->get_values(), ld);
+    //magma_free_cpu(t);
+}
+
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld)
+{
+    auto queue = context->get_queue();
+    auto t = matrix::Dense<device_type, float>::create(context, dim2(num_rows, num_cols));
+    auto exec = context->get_executor();
+    exec->copy(num_rows*num_cols, dmtx, t->get_values());
+    scan_for_nan(num_rows, num_cols, t->get_values(), ld);
+}
+
+template<ContextType device_type>
+void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld)
+{}
+
+
+template void scan_for_nan_gpu(std::shared_ptr<Context<rls::CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld);
+template void scan_for_nan_gpu(std::shared_ptr<Context<rls::CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld);
+template void scan_for_nan_gpu(std::shared_ptr<Context<rls::CUDA>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld);
+
+
 template<ContextType device_type>
 void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld)
 {

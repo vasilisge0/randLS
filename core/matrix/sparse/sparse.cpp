@@ -11,7 +11,6 @@ namespace matrix {
 template <ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>& Sparse<device_type, value_type, index_type>::operator=(Sparse<device_type, value_type, index_type>& mtx_in)
 {
-std::cout << "in operator=\n";
     nnz_ = mtx_in.get_nnz();
     size_ = mtx_in.get_size();
     values_ = std::move(mtx_in.get_values());
@@ -25,7 +24,6 @@ std::cout << "in operator=\n";
 template <ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>& Sparse<device_type, value_type, index_type>::operator=(Sparse<device_type, value_type, index_type>&& mtx_in)
 {
-std::cout << "in move operator=\n";
     nnz_ = mtx_in.get_nnz();
     size_ = mtx_in.get_size();
 
@@ -191,10 +189,19 @@ template<ContextType device_type, typename value_type, typename index_type>
 void Sparse<device_type, value_type, index_type>::apply(Sparse<device_type, value_type, index_type>* rhs, Sparse<device_type, value_type, index_type>* result)
 {
     mtx_->apply(rhs->get_mtx(), result->get_mtx());
+    //{
+    //    auto queue = context_->get_queue();
+    //    //io::scan_for_nan_gpu(context, result->get_size()[0], result->get_size()[1],
+    //    //    result->get_values(), result->get_ld());
+    //    io::scan_for_nan_gpu(context, result->get_size()[0], t1->get_size()[1],
+    //        t1->get_values(), t1->get_size()[0]);
+    //}
     auto context = this->get_context();
     auto exec = context->get_executor();
     auto sol = static_cast<gko::matrix::Csr<value_type, index_type>*>(result->get_mtx().get());
+    // @FIX: you need to set result.nnz_ and initialize result object.
     nnz_ = exec->copy_val_to_host(sol->get_row_ptrs() + sol->get_size()[0]);
+    //nnz_ = exec->copy_val_to_host(sol->get_row_ptrs() + result->get_size()[0]);
 }
 
 //template<> void Sparse<rls::CUDA, double, magma_int_t>::apply(Sparse<rls::CUDA, double, magma_int_t>* rhs,
@@ -217,39 +224,68 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
     auto context = this->get_context();
     auto exec = context->get_executor();
     auto alpha_mtx = gko::initialize<gko::matrix::Dense<value_type>>(
-        {alpha}, exec);
+        {1.0}, exec);
     auto beta_mtx = gko::initialize<gko::matrix::Dense<value_type>>(
         {beta}, exec);
     cudaDeviceSynchronize();
     auto t0 = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get());
     auto t1 = static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx());
     auto t2 = static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx());
+    std::cout << "HERE\n";
+    std::cout << "t0->get_size()[0]: " << t0->get_size()[0] << ", t0->get_size()[1]: " << t0->get_size()[1] << '\n';
+    std::cout << "t1->get_size()[0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << '\n';
+    std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << ", t2->get_size()[1]: " << t2->get_size()[1] << '\n';
+    //result->zeros();
+    std::cout << "beta: " << beta << '\n';
+    cudaDeviceSynchronize();
+    //io::scan_for_nan_gpu(context, t2->get_size()[0], t2->get_size()[1],
+    //    t2->get_values(), t2->get_size()[0]);
+    std::cout << "\n\n\n";
+    {
+        auto queue = context->get_queue();
+        io::print_mtx_gpu(5, 5, (value_type*)t2->get_values(), t2->get_size()[0], queue);
+        std::cout << "t2: " << "\n";
+        io::scan_for_nan_gpu(context, t2->get_size()[0], t2->get_size()[1],
+            t2->get_values(), t2->get_size()[0]);
+    }
     t0->apply(alpha_mtx.get(), t1, beta_mtx.get(), t2);
+    {
+        std::cout << "====> IN APPLY <====\n";
+        std::cout << "sizeof(value_type): " << sizeof(value_type) << "\n";
+        auto queue = context->get_queue();
+        std::cout << "t0->get_size()[0]: " << t0->get_size()[0] << '\n';
+        std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << '\n';
+        std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
+        std::cout << "result: " << "\n";
+        io::scan_for_nan_gpu(context, t2->get_size()[0], t2->get_size()[1],
+            t2->get_values(), t2->get_size()[0]);
+        std::cout << "sizeof(value_type): " << sizeof(value_type) << '\n';
+        io::print_mtx_gpu(5, 5, (value_type*)t2->get_values(), t2->get_size()[0], queue);
+        std::cout << "after\n";
+    }
     //static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get())->apply(alpha_mtx.get(), static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx()), beta_mtx.get(),
     //    static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx()));
     //cudaDeviceSynchronize();
 
     //auto t = static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx());
-    auto t = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get());
-    {
-        auto queue = context->get_queue();
-        std::cout << "result->get_ld(): " << result->get_ld() << '\n';
-        std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
-        //io::write_mtx("S8.mtx", result->get_size()[0], result->get_size()[1],
-        //    (float*)result->get_values(), result->get_ld(), queue);
-        //io::write_mtx("S8.mtx", t->get_size()[0], t->get_size()[1],
-        //    (float*)t->get_values(), t->get_size()[0], queue);
-        //io::write_mtx("S8.mtx", this->get_nnz(), 1,
-        //    (float*)t->get_values(), this->get_nnz(), queue);
-        //std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
-        std::cout << "<-t2->\n";
-        std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << '\n';
-        std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
-        //io::write_mtx("S2.mtx", t2->get_size()[0], t2->get_size()[1],
-        //    (float*)t2->get_values(), t2->get_size()[0], queue);
-        //io::write_mtx("S2.mtx", t2->get_size()[0]*t2->get_size()[1], 1,
-        //    (float*)t2->get_values(), t2->get_size()[0]*t2->get_size()[1], queue);
-    }
+    //auto t = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get());
+    //{
+    //    auto queue = context->get_queue();
+    //    //io::write_mtx("S8.mtx", result->get_size()[0], result->get_size()[1],
+    //    //    (float*)result->get_values(), result->get_ld(), queue);
+    //    //io::write_mtx("S8.mtx", t->get_size()[0], t->get_size()[1],
+    //    //    (float*)t->get_values(), t->get_size()[0], queue);
+    //    //io::write_mtx("S8.mtx", this->get_nnz(), 1,
+    //    //    (float*)t->get_values(), this->get_nnz(), queue);
+    //    //std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
+    //    std::cout << "<-t2->\n";
+    //    std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << '\n';
+    //    std::cout << "t2->get_size()[1]: " << t2->get_size()[1] << '\n';
+    //    //io::write_mtx("S2.mtx", t2->get_size()[0], t2->get_size()[1],
+    //    //    (float*)t2->get_values(), t2->get_size()[0], queue);
+    //    //io::write_mtx("S2.mtx", t2->get_size()[0]*t2->get_size()[1], 1,
+    //    //    (float*)t2->get_values(), t2->get_size()[0]*t2->get_size()[1], queue);
+    //}
 }
 
 template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dense<rls::CUDA, half>* rhs, __half beta, Dense<rls::CUDA, __half>* result)
@@ -281,14 +317,12 @@ std::cout << "\n\nIN TO DENSE\n\n";
     //cusparseDnMatDescr_t descr_dense;
     cusparseSparseToDenseAlg_t alg = CUSPARSE_SPARSETODENSE_ALG_DEFAULT;
     size_t buffer_size = 0;
-    std::cout <<"(values_ == nullptr): " << (values_ == nullptr) << '\n';
     cusparseCreateCsr(&descr_, size_[0], size_[1], nnz_, row_ptrs_, col_idxs_, values_,
         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_16F);
     cusparseCreateDnMat(&descr_dense, static_cast<int64_t>(size_[0]), static_cast<int64_t>(size_[1]),
         static_cast<int64_t>(size_[0]), result->get_values(), CUDA_R_16F, CUSPARSE_ORDER_COL);
     cusparseSparseToDense_bufferSize(cusparse_handle, descr_, descr_dense, alg, &buffer_size);
     void* buffer = nullptr;
-    std::cout << "buffer_size: " << buffer_size << '\n';
     cudaMalloc(&buffer, buffer_size);
     cusparseSparseToDense(cusparse_handle, descr_, descr_dense, alg, buffer);
     cudaFree(buffer);
@@ -524,7 +558,6 @@ template<ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>::~Sparse() {}
 
 template<> Sparse<rls::CUDA, __half, magma_int_t>::~Sparse() {
-std::cout << "in sparse destructor\n";
     if (values_ != nullptr) {
         memory::free<rls::CUDA>(values_);
     }
@@ -536,7 +569,6 @@ std::cout << "in sparse destructor\n";
     if (row_ptrs_ != nullptr) {
         memory::free<rls::CUDA>(col_idxs_);
     }
-std::cout << "out\n";
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
@@ -546,13 +578,6 @@ std::unique_ptr<Sparse<device_type, value_type, index_type>> Sparse<device_type,
     auto T = static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx.get());
     auto context = this->get_context();
     auto queue = context->get_queue();
-    std::cout << "sizeof(T->get_values()): " << sizeof(T->get_values()) << '\n';
-    std::cout << "before writting S1\n";
-    //io::write_mtx("S1.mtx", this->get_nnz(), 1,
-    //    (double*)T->get_values(), this->get_nnz(), queue);
-    //io::write_mtx("S11.mtx", this->get_nnz(), 1,
-    //    (float*)T->get_values(), this->get_nnz(), queue);
-
     return Sparse::create(this->get_context(), mtx);
 }
 
@@ -711,22 +736,15 @@ template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(Sparse<rls::CUDA, 
 
     auto s1 = rhs->get_size();
     auto nnz1 = rhs->get_nnz();
-    std::cout << "size_[0]: " << size_[0] << ", size_[1]: " << size_[1] << '\n';
-    std::cout << "s1[0]: " << s1[0] << ", s1[1]: " << s1[1] << '\n';
-    std::cout << "nnz1: " << nnz1 << ", (int64_t)nnz1: " << (int64_t)nnz1 << '\n';
-    std::cout << "(rhs->get_row_ptrs() == nullptr): " << (rhs->get_row_ptrs() == nullptr) << '\n';
     cusparseCreateCsr(&descr1, (int64_t)s1[0], (int64_t)s1[1], (int64_t)nnz1, rhs->get_row_ptrs(), rhs->get_col_idxs(), rhs->get_values(),
         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_16F);
     auto descr_out = result->get_descriptor();
     //cusparseSpMatDescr_t descr_out;
-std::cout << "before work estimation\n";
 
     int64_t rows, cols, nnz;
     __half* values;
     magma_int_t* row_ptrs;
     magma_int_t* col_idxs;
-std::cout << "here\n";
-std::cout << "after\n";
 
     auto status = cusparseSpGEMM_workEstimation(
         cusparse_handle,
@@ -743,8 +761,6 @@ std::cout << "after\n";
         &bufferSize1,
         NULL
     );
-    std::cout << "status: " << status << '\n';
-    std::cout << "<OUT\n";
     cudaMalloc(&externalBuffer1, bufferSize1);
     cusparseSpGEMM_workEstimation(
         cusparse_handle,
@@ -761,7 +777,6 @@ std::cout << "after\n";
         &bufferSize1,
         externalBuffer1
     );
-std::cout << "after work estimation\n";
 
     size_t bufferSize2;
     size_t bufferSize3;

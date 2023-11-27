@@ -85,108 +85,101 @@ void GaussianSketch<device_type, value_type, value_type_apply, index_type>::appl
         value_type one = 1.0;
         value_type zero = 0.0;
         std::cout << "<here>\n";
-        {
-            auto queue = context->get_queue();
-            //io::write_mtx("S4.mtx", t->get_nnz(), 1,
-            //    (float*)t->get_values(), t->get_nnz(), queue);
-        }
 
         auto A = t->transpose();
         auto S = mtx_->transpose();
 
-        //auto A1 = matrix::Sparse<device_type, value_type_apply, index_type>::create(context,
-        //    A->get_size(), A->get_nnz());
-        //auto S1 = matrix::Dense<device_type, value_type_apply>::create(context,
-        //    S->get_size());
-        std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << '\n';
-        std::cout << "mtx_->get_size()[1]: " << mtx_->get_size()[1] << '\n';
-        std::cout << "t->get_size()[0]: " << t->get_size()[0] << '\n';
-        std::cout << "t->get_size()[1]: " << t->get_size()[1] << '\n';
-        std::cout << "A->get_size()[0]: " << A->get_size()[0] << '\n';
-        std::cout << "A->get_size()[1]: " << A->get_size()[1] << '\n';
-        std::cout << "S->get_size()[0]: " << S->get_size()[0] << '\n';
-        std::cout << "S->get_size()[1]: " << S->get_size()[1] << '\n';
-        std::cout << "S->get_ld(): " << S->get_ld() << '\n';
-        auto t1_size = dim2(static_cast<int>(A->get_size()[0]), static_cast<int>(S->get_size()[1]));
-        auto t1 = matrix::Dense<device_type, value_type_apply>::create(context, t1_size);
-        std::cout << "t1->get_size()[0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << '\n';
-        std::cout << "t1->get_ld(): " << t1->get_ld() << '\n';
-        std::cout << "before apply\n";
+        std::cout << "S: \n";
+        io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1],
+            S->get_values(), S->get_size()[0]);
 
-    {
-        //auto precond_mtx_ = precond_mtx;
-        //io::write_mtx("precond_hgdp.mtx", S->get_size()[0], S->get_size()[1],
-        //    (double*)S->get_values(), S->get_ld(), queue);
-    }
-        cudaDeviceSynchronize();
-        A->apply(one, S.get(), zero, t1.get());
-        cudaDeviceSynchronize();
-
-        //A1->apply(one, S.get(), zero, t1.get());
-        //A1->apply(one, S1.get(), zero, t1.get());
-        std::cout << "after apply\n";
-        exec->copy(t1->get_size()[0] * t1->get_size()[1], t1->get_values(),
-            result->get_values());
-
-        {
-            auto queue = context->get_queue();
-            //io::write_mtx("S1.mtx", t1->get_size()[0]*t1->get_size()[1], 1,
-            //    (float*)t1->get_values(), t1->get_size()[0]*t1->get_size()[1], queue);
-            //io::write_mtx("S1.mtx", t1->get_size()[0], 1,
-            //    (float*)t1->get_values(), t1->get_size()[0], queue);
-            //io::write_mtx("S1.mtx", S->get_size()[0], 1,
-            //    (float*)S->get_values(), S->get_size()[0], queue);
-            {
-                ////auto R = static_cast<gko::matrix::Csr<value_type, index_type>*>(t->get_mtx().get());
-                ////auto z = R->transpose();
-                ////auto T = static_cast<gko::matrix::Csr<value_type, index_type>*>(z.get());
-                //io::write_mtx("S10.mtx", t->get_nnz(), 1,
-                //    (float*)R->get_values(), t->get_nnz(), queue);
-                //io::write_mtx("S12.mtx", t->get_nnz(), 1,
-                //    (float*)T->get_values(), t->get_nnz(), queue);
-//io::write_mtx("S12.mtx", t->get_nnz(), 1,
-//    (float*)A->get_values(), t->get_nnz(), queue);
-//io::write_mtx("S13.mtx", mtx_->get_size()[0]*mtx_->get_size()[1], 1,
-//    (float*)mtx_->get_values(), S->get_size()[0]*mtx_->get_size()[1], queue);
-                //io::write_mtx("S3.mtx", t1->get_size()[0]*t1->get_size()[1], 1,
-                //    (float*)t1->get_values(), t1->get_size()[0]*t1->get_size()[1], queue);
-                //
-                //io::write_mtx_gpu(context, "S12.mtx", A->get_nnz(), (float*)A->get_values());
-                //io::write_mtx_gpu(context, "S13.mtx", S->get_size()[0]*S->get_size()[1], (float*)S->get_values());
-                //std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << '\n';
-                //std::cout << "mtx_->get_ld(): " << mtx_->get_ld() << '\n';
-                //std::cout << "S->get_size()[0]: " << S->get_size()[0] << '\n';
-                //std::cout << "S->get_ld(): " << S->get_ld() << '\n';
-                //std::cout << "t->get_size()[0]: " << t->get_size()[0] << '\n';
-                //io::write_mtx("S13.mtx", 100, 1,
-                //    (float*)mtx_->get_values(), 100, queue);
-                //std::cout << "S12: \n";
-                //io::print_mtx_gpu(10, 1, (float*)A->get_values(), 10, queue);
-            }
-        }
-
-        //io::write_mtx_gpu(context, "S10.mtx", t->get_nnz(), (float*)t->get_values());
-        //io::write_mtx_gpu(context, "S10.mtx", A->get_nnz(), (float*)A->get_values());
-        //io::write_mtx_gpu(context, "S11.mtx", mtx_->get_size()[0]*mtx_->get_size()[1], (float*)mtx_->get_values());
-        //printf()
-        //
-        auto queue = context->get_queue();
-        //io::print_mtx_gpu(2000, 1, (float*)mtx_->get_values(), 100, queue);
-        //io::write_mtx_gpu(context, "S11.mtx", 2000, (float*)mtx_->get_values());
-        io::write_mtx_gpu(context, "S12.mtx", t1->get_size()[0]*t1->get_size()[1], t1->get_values());
-        cuda::transpose(t1->get_size()[0], t1->get_size()[1], t1->get_values(),
-            t1->get_ld(), result->get_values(), result->get_ld());
-        //io::write_mtx_gpu(context, "S13.mtx", result->get_size()[0]*result->get_size()[1], (float*)result->get_values());
+        std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << "\n";
+        auto T = mtx_->get_mtx();
+        std::cout << "T->get_size()[0]: " << T->get_size()[0] << '\n';
 
         //{
         //    auto queue = context->get_queue();
-        //    io::write_mtx("S1.mtx", result->get_size()[0], result->get_size()[1],
-        //        (float*)result->get_values(), result->get_ld(), queue);
+        //    std::cout << "\n\n\n before mm:\n";
+        //    std::cout << "mtx_\n";
+        //    io::scan_for_nan_gpu(context, mtx_->get_size()[0], mtx_->get_size()[1], mtx_->get_values(),
+        //        mtx_->get_ld());
+
+        //    std::cout << "s\n";
+        //    io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1], S->get_values(),
+        //        S->get_ld());
+
+        //    std::cout << "mtx_\n";
+        //    io::scan_for_nan_gpu(context, mtx_->get_size()[0], mtx_->get_size()[1], mtx_->get_values(),
+        //        mtx_->get_ld());
+
+        //    std::cout << "s\n";
+        //    io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1], S->get_values(),
+        //        S->get_ld());
+
+        //    std::cout << "t\n";
+        //    io::scan_for_nan_gpu(context, t->get_nnz(), 1, t->get_values(),
+        //        t->get_nnz());
+
+        //    std::cout << "A\n";
+        //    io::scan_for_nan_gpu(context, A->get_nnz(), 1, A->get_values(),
+        //        A->get_nnz());
+        //    //io::write_mtx("S4.mtx", t->get_nnz(), 1,
+        //    //    (float*)t->get_values(), t->get_nnz(), queue);
         //}
 
-        std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
-        std::cout << "result->get_ld(): " << result->get_ld() << '\n';
-        std::cout << "lalala\n";
+        ////auto A1 = matrix::Sparse<device_type, value_type_apply, index_type>::create(context,
+        ////    A->get_size(), A->get_nnz());
+        ////auto S1 = matrix::Dense<device_type, value_type_apply>::create(context,
+        ////    S->get_size());
+        //std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << '\n';
+        //std::cout << "mtx_->get_size()[1]: " << mtx_->get_size()[1] << '\n';
+        //std::cout << "t->get_size()[0]: " << t->get_size()[0] << '\n';
+        //std::cout << "t->get_size()[1]: " << t->get_size()[1] << '\n';
+        //std::cout << "A->get_size()[0]: " << A->get_size()[0] << '\n';
+        //std::cout << "A->get_size()[1]: " << A->get_size()[1] << '\n';
+        //std::cout << "S->get_size()[0]: " << S->get_size()[0] << '\n';
+        //std::cout << "S->get_size()[1]: " << S->get_size()[1] << '\n';
+        //std::cout << "S->get_ld(): " << S->get_ld() << '\n';
+        auto t1_size = dim2(static_cast<int>(A->get_size()[0]), static_cast<int>(S->get_size()[1]));
+        auto t1 = matrix::Dense<device_type, value_type_apply>::create(context, t1_size);
+        //std::cout << "t1->get_size()[0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << '\n';
+        //std::cout << "t1->get_ld(): " << t1->get_ld() << '\n';
+        //std::cout << "before apply\n";
+
+    {
+        ////auto precond_mtx_ = precond_mtx;
+        ////io::write_mtx("precond_hgdp.mtx", S->get_size()[0], S->get_size()[1],
+        ////    (double*)S->get_values(), S->get_ld(), queue);
+    }
+        //cudaDeviceSynchronize();
+        A->apply(one, S.get(), zero, t1.get());
+        //cudaDeviceSynchronize();
+
+        ////A1->apply(one, S.get(), zero, t1.get());
+        ////A1->apply(one, S1.get(), zero, t1.get());
+        //std::cout << "after apply\n";
+        //exec->copy(t1->get_size()[0] * t1->get_size()[1], t1->get_values(),
+        //    result->get_values());
+
+        //{
+        //    std::cout << "\n\nbefore: \n";
+        //    auto queue = context->get_queue();
+        //    io::print_mtx_gpu(4, 4, result->get_values(), result->get_ld(), queue);
+        //}
+
+        //{
+        //    auto queue = context->get_queue();
+        //    std::cout << "before copy\n";
+        //    //io::scan_for_nan_gpu(context, result->get_size()[0], result->get_size()[1],
+        //    //    result->get_values(), result->get_ld());
+        //    io::scan_for_nan_gpu(context, t1->get_size()[0], t1->get_size()[1],
+        //        t1->get_values(), t1->get_size()[0]);
+        //}
+
+std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
+std::cout << "result->get_ld(): " << result->get_ld() << '\n';
+        //cuda::transpose(t1->get_size()[0], t1->get_size()[1], t1->get_values(),
+        //    t1->get_ld(), result->get_values(), result->get_ld());
     }
 }
 
@@ -200,17 +193,6 @@ GaussianSketch<device_type, value_type, value_type_apply, index_type>::GaussianS
     sketch::gaussian_sketch_impl(mtx);
     std::cout << "in copy\n";
     mtx_->copy_from(mtx.get());
-    //{
-    //    auto queue = context->get_queue();
-    //    //io::print_mtx_gpu(mtx_->get_size()[0]*mtx_->get_size()[1], 1, (float*)mtx_->get_values(), mtx_->get_size()[0]*mtx_->get_size()[1], queue);
-    //    //io::print_mtx_gpu(1000, 1, (float*)mtx_->get_values(), 1000, queue);
-    //    io::print_mtx_gpu(10, 1, mtx_->get_values(), 10, queue);
-    //    std::cout << "\n";
-    //    io::write_mtx_gpu(context, "S11.mtx", mtx_->get_size()[0]*mtx_->get_size()[1],
-    //        mtx_->get_values());
-    //    //io::write_mtx("S2.mtx", mtx_->get_size()[0], mtx_->get_size()[1],
-    //    //    (float*)mtx_->get_values(), mtx_->get_ld(), queue);
-    //}
 }
 
 template<ContextType device_type, typename value_type, typename value_type_apply, typename index_type>

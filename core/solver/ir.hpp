@@ -39,7 +39,7 @@ public:
     {
         for (auto r = 0; r < restarts_; r++) {
             solver_->run();
-            std::cout << "r: " << r << '\n';
+            std::cout << "r: " << r << "/" << restarts_ << '\n';
             if (solver_->converges()) {
                 break;
             }

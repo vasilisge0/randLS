@@ -1014,8 +1014,6 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
         logger->set_stagnation_history(workspace->completed_iterations,
             stagnation_index / workspace->resnorm_previous);
     }
-    //std::cout << "stagnates: " << workspace->solver_stagnates(stagnation_index, config->get_stagnation_tolerance(),
-    //    workspace->resnorm_previous) << '\n';
     if ((workspace->completed_iterations_per_restart >= config->get_iterations())
         || (workspace->resnorm < config->get_tolerance())
         || stagnates) {
@@ -1054,18 +1052,20 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
     if (workspace->new_restart_active) {
         logger->set_relres_history(workspace->completed_iterations, workspace->resnorm);
         double true_sol_norm = 0.0;
+        double true_error = 0.0;
+        double noisy_error = 0.0;
         if (logger->record_true_error()) {
             blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
             blas::axpy(context, num_cols, minus_one, workspace->true_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
             auto t = blas::norm2(context, num_cols, workspace->true_sol_->get_values(), 1);
             true_sol_norm = t;
-            auto true_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
+            true_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
             logger->set_true_error_history(workspace->completed_iterations, true_error);  // @error
         }
         if (logger->record_noisy_error() && logger->record_true_error()) {
             blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
             blas::axpy(context, num_cols, minus_one, workspace->noisy_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
-            auto noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/true_sol_norm;
+            noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/true_sol_norm;
             logger->set_noisy_error_history(workspace->completed_iterations, noisy_error);  // @error
             auto t0 = blas::norm2(context, num_cols, workspace->true_sol_->get_values(), 1);
             auto t1 = blas::norm2(context, num_cols, workspace->noisy_sol_->get_values(), 1);
@@ -1082,12 +1082,16 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
             blas::copy(context, num_cols, sol->get_values(), 1, workspace->true_error_->get_values(), 1);
             blas::axpy(context, num_cols, minus_one, workspace->noisy_sol_->get_values(), 1, workspace->true_error_->get_values(), 1);
             auto t = blas::norm2(context, num_cols, workspace->noisy_sol_->get_values(), 1);
-            auto noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
+            noisy_error = blas::norm2(context, num_cols, workspace->true_error_->get_values(), 1)/t;
             logger->set_noisy_error_history(workspace->completed_iterations, noisy_error);  // @error
         }
 #if VISUALS
     std::cout << workspace->completed_iterations << " / ";
-    std::cout << std::setprecision(15) << workspace->resnorm << '\n';
+    std::cout << std::setprecision(4) << workspace->resnorm;
+    std::cout << " / true_error: ";
+    std::cout << true_error << " / ";
+    std::cout << " noisy_error: ";
+    std::cout << noisy_error << " \n ";
 #endif
     }
     else
@@ -1105,6 +1109,9 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
     if ((logger->record_stagnation()) && (workspace->new_restart_active)) {
         logger->set_stagnation_history(workspace->completed_iterations,
             stagnation_index / workspace->resnorm_previous);
+    }
+    if (isnan(workspace->resnorm)) {
+        return true;
     }
     //std::cout << "stagnates: " << workspace->solver_stagnates(stagnation_index, config->get_stagnation_tolerance(),
     //    workspace->resnorm_previous) << '\n';
