@@ -244,6 +244,9 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
     {
         auto queue = context->get_queue();
         io::print_mtx_gpu(5, 5, (value_type*)t2->get_values(), t2->get_size()[0], queue);
+        std::cout << "t1: " << "\n";
+        io::scan_for_nan_gpu(context, t1->get_size()[0], t1->get_size()[1],
+            t1->get_values(), t1->get_size()[0]);
         std::cout << "t2: " << "\n";
         io::scan_for_nan_gpu(context, t2->get_size()[0], t2->get_size()[1],
             t2->get_values(), t2->get_size()[0]);
@@ -253,6 +256,7 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
         std::cout << "====> IN APPLY <====\n";
         std::cout << "sizeof(value_type): " << sizeof(value_type) << "\n";
         auto queue = context->get_queue();
+        io::print_mtx_gpu(5, 5, (value_type*)t2->get_values(), t2->get_size()[0], queue);
         std::cout << "t0->get_size()[0]: " << t0->get_size()[0] << '\n';
         std::cout << "t2->get_size()[0]: " << t2->get_size()[0] << '\n';
         std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
@@ -260,7 +264,6 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
         io::scan_for_nan_gpu(context, t2->get_size()[0], t2->get_size()[1],
             t2->get_values(), t2->get_size()[0]);
         std::cout << "sizeof(value_type): " << sizeof(value_type) << '\n';
-        io::print_mtx_gpu(5, 5, (value_type*)t2->get_values(), t2->get_size()[0], queue);
         std::cout << "after\n";
     }
     //static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get())->apply(alpha_mtx.get(), static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx()), beta_mtx.get(),

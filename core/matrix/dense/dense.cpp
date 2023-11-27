@@ -92,6 +92,7 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
         cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
             static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
+    this->zeros();
 }
 
 template <ContextType device_type, typename value_type>

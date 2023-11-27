@@ -351,11 +351,15 @@ void scan_for_nan(magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma
 {
     std::cout << "num_rows: " << num_rows << ", num_cols: " << num_cols << '\n';
     bool found_nan = false;
+    printf("->%f: \n", dmtx[0]);
     for (auto r = 0; r < num_rows; r++) {
         for (auto c = 0; c < num_cols; c++) {
             if (isnan(dmtx[r*num_cols + c])) {
                 found_nan = true;
                 printf("NaN in position (%d, %d)\n", r, c);
+                printf("%f: \n", dmtx[0]);
+                printf("%f: \n", dmtx[r*num_cols + c -1]);
+                printf("%f: \n", dmtx[r*num_cols + c]);
                 return;
             }
         }
@@ -375,7 +379,7 @@ void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t
     auto exec = context->get_executor();
     //exec->copy(ld, dmtx, t->get_values());
     exec->copy(num_rows*num_cols, dmtx, t->get_values());
-    scan_for_nan(num_rows, num_cols, t->get_values(), ld);
+    scan_for_nan(num_rows, num_cols, t->get_values(), num_rows);
     //magma_free_cpu(t);
 }
 
@@ -386,7 +390,9 @@ void scan_for_nan_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t
     auto t = matrix::Dense<device_type, float>::create(context, dim2(num_rows, num_cols));
     auto exec = context->get_executor();
     exec->copy(num_rows*num_cols, dmtx, t->get_values());
-    scan_for_nan(num_rows, num_cols, t->get_values(), ld);
+    printf("t[0]: %f\n", t->get_values()[0]);
+    printf("t[1]: %f\n", t->get_values()[1]);
+    scan_for_nan(num_rows, num_cols, t->get_values(), num_rows);
 }
 
 template<ContextType device_type>
