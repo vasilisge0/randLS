@@ -7,6 +7,9 @@ investigate the effect that mixed precision computations have on randomized
 preconditioners for least squares solvers, while at the same time attaining
 modest runtime savings.
 
+Latest developments that use mixed precision sparse sketching to solve regularized
+least squares can be found in the "dev" branch.
+
 MAGMA[1] is used for performing BLAS on the GPU, cudaRand[2] for
 generating random samples and custom cuda kernels for conversions between
 precisions.
