@@ -190,19 +190,11 @@ template<ContextType device_type, typename value_type, typename index_type>
 void Sparse<device_type, value_type, index_type>::apply(Sparse<device_type, value_type, index_type>* rhs, Sparse<device_type, value_type, index_type>* result)
 {
     mtx_->apply(rhs->get_mtx(), result->get_mtx());
-    //{
-    //    auto queue = context_->get_queue();
-    //    //io::scan_for_nan_gpu(context, result->get_size()[0], result->get_size()[1],
-    //    //    result->get_values(), result->get_ld());
-    //    io::scan_for_nan_gpu(context, result->get_size()[0], t1->get_size()[1],
-    //        t1->get_values(), t1->get_size()[0]);
-    //}
     auto context = this->get_context();
     auto exec = context->get_executor();
     auto sol = static_cast<gko::matrix::Csr<value_type, index_type>*>(result->get_mtx().get());
     // @FIX: you need to set result.nnz_ and initialize result object.
-    nnz_ = exec->copy_val_to_host(sol->get_row_ptrs() + sol->get_size()[0]);
-    //nnz_ = exec->copy_val_to_host(sol->get_row_ptrs() + result->get_size()[0]);
+    //nnz_ = exec->copy_val_to_host(sol->get_row_ptrs() + sol->get_size()[0]);
 }
 
 //template<> void Sparse<rls::CUDA, double, magma_int_t>::apply(Sparse<rls::CUDA, double, magma_int_t>* rhs,
@@ -318,34 +310,6 @@ template<> void Sparse<rls::CUDA, __half, magma_int_t>::to_dense(Dense<rls::CUDA
     cudaMalloc(&buffer, buffer_size);
     cusparseSparseToDense(cusparse_handle, descr_, descr_dense, alg, buffer);
     cudaFree(buffer);
-
-    //auto T = rls::matrix::Dense<rls::CUDA, double>::create(context, result->get_size());
-    //T->copy_from(result);
-    //auto queue = context->get_queue();
-    //std::cout << "result->get_values(): \n";
-    //rls::io::print_mtx_gpu(5, 1, T->get_values(), T->get_size()[0], queue);
-
-    //int64_t rows;
-    //int64_t cols;
-    //int64_t ld;
-    ////auto v = result->get_values();
-    //void* v;
-    ////auto tmp = matrix::Dense<rls::CUDA, __half>::create(context);
-    //cudaDataType type;
-    //cusparseOrder_t order;
-    //std::cout << "ttttttttt\n";
-    //cusparseDnMatGet(
-    //    descr_dense,
-    //    &rows,
-    //    &cols,
-    //    &ld,
-    //    (void**)&v,
-    //    &type,
-    //    &order);
-    //utils::convert(context, (int)(rows*cols), (int)1, (__half*)v,
-    //    (int)(rows*cols), result->get_values(), (int)(rows*cols));
-    //std::cout << "order: " << order << '\n';
-    //cusparseDestroyDnMat(descr_dense);
 }
 
 template<ContextType device_type, typename value_type, typename index_type>
