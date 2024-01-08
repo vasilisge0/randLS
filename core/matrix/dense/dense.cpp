@@ -89,9 +89,6 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
     malloc();
     this->alloc_elems = size[0] * size[1];
     if (std::is_same<value_type, __half>::value) {
-        std::cout << "alldescr\n";
-        std::cout << "static_cast<int64_t>(this->size_[0]): " << static_cast<int64_t>(this->size_[0]) << '\n';
-        std::cout << "static_cast<int64_t>(this->size_[1]): " << static_cast<int64_t>(this->size_[1]) << '\n';
         cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
             static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
@@ -122,7 +119,6 @@ Dense<device_type, value_type>::Dense(Dense&& mtx) : Mtx<device_type>(mtx.get_co
     this->ld_      = mtx.get_ld();
     auto v = mtx.get_values();
     if (std::is_same<value_type, __half>::value) {
-        std::cout << "alldescr\n";
         cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
             static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
@@ -265,7 +261,6 @@ void Dense<device_type, value_type>::apply(Dense<device_type, value_type>* rhs, 
 template <ContextType device_type, typename value_type>
 void Dense<device_type, value_type>::apply(value_type alpha, Dense<device_type, value_type>* rhs, value_type beta, Dense<device_type, value_type>* result)
 {
-std::cout << "\n\n\nin precond_apply\n\n\n";
     blas::gemm(Mtx<device_type>::get_context(), MagmaNoTrans, MagmaNoTrans, this->size_[0],
           rhs->get_size()[1], this->size_[1], alpha, values_,
           this->size_[0], rhs->get_values(), rhs->get_size()[0],
@@ -435,9 +430,7 @@ template<> std::unique_ptr<Dense<rls::CUDA, __half>> Dense<rls::CUDA, __half>::t
     std::shared_ptr<gko::LinOp> t;
     memory::malloc<rls::CUDA>(&v, this->size_[0] * this->size_[1]);
     s = dim2(this->size_[1], this->size_[0]);
-    std::cout << "before half transpose\n";
     cuda::transpose(this->size_[0], this->size_[1], values_, this->size_[0], v, this->size_[1]);
-    std::cout << "after half transpose\n";
     return Dense<rls::CUDA, __half>::create(c, s, std::move(v));
 }
 

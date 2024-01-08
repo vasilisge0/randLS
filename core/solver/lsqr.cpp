@@ -829,7 +829,6 @@ void step_1(std::shared_ptr<Context<device>> context,
     blas::axpy(context, num_cols, -(workspace->beta), workspace->v->get_values(), 1,
                workspace->temp1->get_values(), 1);
     workspace->alpha = blas::norm2(context, num_cols, workspace->temp1->get_values(), inc);
-    std::cout << "beta: " << workspace->beta << ", alpha: " << workspace->alpha << "\n";
     blas::scale(context, num_cols, 1 / workspace->alpha, workspace->temp1->get_values(), inc);
     blas::copy(context, num_cols, workspace->temp1->get_values(), inc, workspace->v->get_values(), inc);
 }
@@ -1151,7 +1150,6 @@ void run_lsqr(std::shared_ptr<Context<device>> context,
               matrix::Dense<device, vtype_refine>* rhs_refine,
               matrix::Dense<device, vtype_refine>* sol_refine)
 {
-std::cout << "in run_lsqr\n";
     auto mtx = static_cast<matrix::Dense<device, vtype>*>(workspace->mtx_.get());
     auto res = workspace->res_.get();
     auto rhs = workspace->rhs_refine_.get();
@@ -1386,7 +1384,6 @@ void Lsqr<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
 {
     auto size = mtx_->get_size();
     std::cout << "logger_->record_true_error(): " << logger_->record_true_error() << '\n';
-    std::cout << "here\n";
     if (logger_->record_true_error() && (logger_->record_noisy_error())) {
         true_sol_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_true_sol());
         auto noisy_sol = rls::share(rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_noisy_sol()));
@@ -1399,7 +1396,6 @@ void Lsqr<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
         std::cout << "logger_->get_filename_true_sol(): " << logger_->get_filename_true_sol();
         true_sol_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_true_sol());
         true_error_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), dim2(size[1], 1));
-        std::cout << "--> at this point\n";
         workspace_ = lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>::create(
             this->get_context(), mtx_, sol_, rhs_, true_sol_, true_error_);
     }

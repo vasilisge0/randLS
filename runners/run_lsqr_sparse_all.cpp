@@ -1474,7 +1474,7 @@ void run_sparse_reg_lsqr_for_precisions(solver_config_t& parameters)
     {
         std::cout << "\n\nINSTANCE 2\n\n";
         using vtype_precond_apply = __half;
-        using vtype_precond_internal = double;  // for __half, this works for float or double it doesn't
+        using vtype_precond_internal = __half;  // for __half, this works for float or double it doesn't
         using vtype_solver_internal = double;
         using vtype_solver = double;
         auto filename_relres = parameters.filename_relres + "_2.mtx";
@@ -1510,7 +1510,6 @@ void run_sparse_reg_lsqr_for_precisions(solver_config_t& parameters)
     }
 
     ////{
-    ////    cudaDeviceSynchronize();
     ////    std::cout << "\n\nINSTANCE 3\n\n";
     ////    using vtype_precond_apply = double;
     ////    using vtype_precond_internal = double;
@@ -2203,8 +2202,8 @@ int main(int argc, char* argv[])
                 solver_config_t parameters;
                 //parameters.tol = tol;
                 parameters.tol = 1e-5;
-                parameters.maxiter = 6;
-                parameters.miniter = 5;
+                parameters.maxiter = 400;
+                parameters.miniter = 50;
                 parameters.restarts = 1;
                 parameters.sampling_coeff = sampling_coeff;
                 parameters.matrix = matrix;

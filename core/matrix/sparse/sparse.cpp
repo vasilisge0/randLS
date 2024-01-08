@@ -236,70 +236,6 @@ void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<
 
 template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dense<rls::CUDA, half>* rhs, __half beta, Dense<rls::CUDA, __half>* result)
 {
-std::cout << " \n\n\n ***** in sparse apply\n\n\n";
-//std::cout << ">>>> in sparse apply (half)\n";
-//    auto context = this->get_context();
-//    auto exec = context->get_executor();
-//    size_t buffer_size;
-//    auto cusparse_handle = context->get_cusparse_handle();
-//
-//// need to change  dnmat -> dnvec
-//    long int s_B = static_cast<long int>(rhs->get_size()[0]);
-//    cusparseDnVecDescr_t dnVecDescr_b;
-//    cusparseCreateDnVec(&dnVecDescr_b, s_B, rhs->get_values(), CUDA_R_16F);
-//
-//    cusparseDnVecDescr_t dnVecDescr_result;
-//    long int s_R = static_cast<long int>(result->get_size()[0]);
-//    cusparseCreateDnVec(&dnVecDescr_result, s_R, result->get_values(), CUDA_R_16F);
-//
-//    float alpha_float = (float)alpha;
-//    float beta_float = (float)beta;
-//
-//std::cout << "before buffer size SpMV\n";
-//    cusparseSpMV_bufferSize(cusparse_handle,
-//                        CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                        &alpha_float,
-//                        this->get_descriptor(),  // non-const descriptor supported
-//                        dnVecDescr_b,   // non-const descriptor supported
-//                        &beta_float,
-//                        dnVecDescr_result,
-//                        CUDA_R_32F,
-//                        CUSPARSE_SPMV_ALG_DEFAULT,
-//                        &buffer_size);
-//
-//    void* buffer = nullptr;
-//    cudaMalloc(&buffer, buffer_size);
-//std::cout << "before SpMV\n";
-//    cusparseSpMV(cusparse_handle,
-//                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                 &alpha_float,
-//                 this->get_descriptor(),  // non-const descriptor supported
-//                 dnVecDescr_b,   // non-const descriptor supported
-//                 &beta_float,
-//                 dnVecDescr_result,
-//                 CUDA_R_32F,
-//                 CUSPARSE_SPMV_ALG_DEFAULT,
-//                 buffer);
-//
-//std::cout << "result: \n";
-//auto queue = context->get_queue();
-//io::print_mtx_gpu(10, 1, result->get_values(), 10, queue);
-//
-//std::cout << "before free\n";
-//    cudaFree(buffer);
-//    cusparseDestroyDnVec(dnVecDescr_b);
-//    cusparseDestroyDnVec(dnVecDescr_result);
-//std::cout << "after free\n";
-//
-//    //auto alpha_mtx = gko::initialize<gko::matrix::Dense<value_type>>(
-//    //    {alpha}, exec);
-//    //auto beta_mtx = gko::initialize<gko::matrix::Dense<value_type>>(
-//    //    {beta}, exec);
-//    //static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx_.get())->apply(alpha_mtx.get(), static_cast<gko::matrix::Dense<value_type>*>(rhs->get_mtx()), beta_mtx.get(),
-//    //    static_cast<gko::matrix::Dense<value_type>*>(result->get_mtx()));
-//
-
-
     auto context = this->get_context();
     auto exec = context->get_executor();
     size_t buffer_size;
@@ -313,23 +249,6 @@ std::cout << " \n\n\n ***** in sparse apply\n\n\n";
         static_cast<int64_t>(rhs->get_size()[1]),
         static_cast<int64_t>(rhs->get_size()[0]),
         rhs->get_values(), CUDA_R_16F, CUSPARSE_ORDER_COL);
-
-        auto d = rhs->get_descriptor();
-        int64_t             rows;
-        int64_t             cols;
-        int64_t             ld;
-        void*               values;
-        cudaDataType        type;
-        cusparseOrder_t     order;
-        cusparseDnMatGet(d,
-                  &rows,
-                  &cols,
-                  &ld,
-                  &values,
-                  &type,
-                  &order);
-        std::cout << "rows: " << rows << '\n';
-        std::cout << "cols: " << cols << '\n';
 
     cusparseSpMM_bufferSize(cusparse_handle,
                             CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -384,12 +303,10 @@ void Sparse<device_type, value_type, index_type>::to_dense(Dense<device_type, va
 
 template<> void Sparse<rls::CUDA, __half, magma_int_t>::to_dense(Dense<rls::CUDA, __half>* result)
 {
-std::cout << "\n\nIN TO DENSE\n\n";
     auto context = this->get_context();
     auto cusparse_handle = context->get_cusparse_handle();
     std::cout << "here\n";
     cusparseDnMatDescr_t descr_dense = result->get_descriptor();
-    //cusparseDnMatDescr_t descr_dense;
     cusparseSparseToDenseAlg_t alg = CUSPARSE_SPARSETODENSE_ALG_DEFAULT;
     size_t buffer_size = 0;
     cusparseCreateCsr(&descr_, size_[0], size_[1], nnz_, row_ptrs_, col_idxs_, values_,

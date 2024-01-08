@@ -32,19 +32,11 @@ int sketch_qr_impl(
     sketch->apply(state->mtx, state->sketched_mtx); // Copy to state->mtx outside of sketch_qr_impl.
     auto queue = context->get_queue();
     index_type info_qr = 0;
-    std::cout << "state->sketched_mtx->get_size()[0]: " << state->sketched_mtx->get_size()[0] << "\n";;
-    std::cout << "state->sketched_mtx->get_size()[1]: " << state->sketched_mtx->get_size()[1] << "\n";;
-    std::cout << "state->sketched_mtx->get_ld(): " << state->sketched_mtx->get_ld() << "\n";;
-    std::cout << "        precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << "\n";;
-    std::cout << "        precond_mtx->get_size()[1]: " << precond_mtx->get_size()[1] << "\n";;
-    std::cout << "        precond_mtx->get_ld(): " << precond_mtx->get_ld() << "\n";;
     precond_mtx->copy_from(state->sketched_mtx.get());
-    //precond_mtx->zeros();
     io::print_mtx_gpu(5, 5, precond_mtx->get_values(), precond_mtx->get_size()[0], queue);
     blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
                  precond_mtx->get_values(), ld_r_factor,
                  state->tau->get_values(), &info_qr);
-    std::cout << "info_qr: " << info_qr << '\n';
     dim2 s = {ld_r_factor, num_cols_mtx};
     cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
     return info_qr;
@@ -148,8 +140,6 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::g
     blas::trtri(context_, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
     precond_mtx_apply_->copy_from(precond_mtx_.get());
-    std::cout << "sizeof(*(precond_mtx_apply_->get_values()): " << sizeof(*(precond_mtx_apply_->get_values())) << "\n";
-    std::cout << "sizeof(*(precond_mtx_->get_values())): " << sizeof(*(precond_mtx_->get_values())) << "\n";
     auto v = precond_mtx_apply_->get_values();
 }
 
@@ -167,10 +157,6 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::a
     auto queue = context->get_queue();
     blas::gemv(context, trans, size[1], size[1], one, precond_mtx_apply_->get_values(),
                size[0], u_vector_part_1->get_values(), 1, zero, t_apply->get_values(), 1);
-    cudaDeviceSynchronize();
-    //exec->copy(size[1], t_apply->get_values(), u_vector_part_1->get_values());
-    //std::cout << "apply\n";
-    std::cout << "u_vector_part_1->get_ld(): " << u_vector_part_1->get_ld() << '\n';
     u_vector_part_1->copy_from(t_apply.get());
 }
 
