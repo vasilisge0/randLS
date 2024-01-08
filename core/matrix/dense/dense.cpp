@@ -29,9 +29,6 @@ std::shared_ptr<gko::LinOp> Dense<device_type, value_type>::get_mtx_shared()
     return mtx;
 }
 
-//template <ContextType device_type, typename value_type>
-//dim2 Dense<device_type, value_type>::get_size() { return this->size_; }
-
 template <ContextType device_type, typename value_type>
 magma_int_t Dense<device_type, value_type>::get_alloc_elems()
 {
@@ -358,7 +355,7 @@ void Dense<device_type, value_type>::copy_from(matrix::Dense<device_type, value_
     utils::convert(Mtx<device_type>::get_context(), this->size_[0], this->size_[1],
         mtx->get_values(), mtx->get_ld(), values_, this->ld_);
 
-    //// the following is problematic
+    // @FIX.
     //if ((std::is_same<value_type, double>::value) || (std::is_same<value_type, float>::value)) {
     //    this->mtx = mtx->get_mtx_shared();
     //}
@@ -466,8 +463,6 @@ Dense<device_type, value_type>& Dense<device_type, value_type>::operator=(Dense<
     this->size_ = mtx_in.get_size();
     this->values_ = mtx_in.get_values();
     this->mtx = mtx_in.get_mtx_shared();
-    //auto v = mtx_in.get_values();
-    //v = nullptr;
     return *this;
 }
 
