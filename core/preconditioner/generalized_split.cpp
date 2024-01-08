@@ -49,7 +49,6 @@ template class Config<double, float, double, magma_int_t>;
 template class Config<double, __half, double, magma_int_t>;
 template class Config<float, double, double, magma_int_t>;
 template class Config<float, __half, double, magma_int_t>;
-//template class GeneralizedSplit<CUDA, double, double, __half, magma_int_t>;
 template class Config<double, float, float, magma_int_t>;
 template class Config<float, float, float, magma_int_t>;
 template class Config<float, __half, float, magma_int_t>;
@@ -63,10 +62,6 @@ void GeneralizedSplit<device_type, value_type, value_type_internal_0, value_type
     std::shared_ptr<Context<device_type>> context, magma_trans_t trans, matrix::Dense<device_type, value_type>* u_vector)
 {
     auto size = dim2(u_vector->get_size()[0] - precond_mtx_->get_size()[1], precond_mtx_->get_size()[1]);
-    //auto u1 = rls::matrix::Dense<device_type, value_type>::create(context,
-    //    dim2(size[1], 1), u_vector->get_values() + size[0]);
-    //auto u1 = matrix::Dense<device_type, value_type>::create_submatrix(u_vector,
-    //    span(size[0], size[0] + size[1]), span(0, 0));
     auto u1 = matrix::Dense<device_type, value_type>::create_subcol(u_vector,
         span(size[0], size[0] + size[1]), 0);
     temp1->copy_from(u1.get());

@@ -32,10 +32,7 @@ template <typename vtype_0, typename vtype_in_0,
 class SketchQrConfig : public Config {
 
 private:
-    SketchQrConfig(double sampling_coefficient) : Config(sampling_coefficient)
-    {
-        //this->sampling_coefficient_ = sampling_coefficient;
-    }
+    SketchQrConfig(double sampling_coefficient) : Config(sampling_coefficient) {}
 
 public:
     static std::unique_ptr<SketchQrConfig<vtype_0, vtype_in_0, vtype_precond_apply, index_type>>
@@ -82,12 +79,8 @@ struct state {
             static_cast<matrix::Sparse<device, vtype_internal, index_type>*>(mtx.get())->copy_from(t_in);
             auto queue = context->get_queue();
         }
-        std::cout << "before sketched_mtx\n";
         sketched_mtx = matrix::Dense<device, vtype_internal>::create(
             context, {static_cast<int>(this->ld_r_factor), this->size[1]});
-        std::cout << "static_cast<int>(this->ld_r_factor): " << static_cast<int>(this->ld_r_factor) << ", this->size[1]: " << this->size[1] << '\n';
-        std::cout << "(sketched_mtx->get_descriptor() == NULL): " << (sketched_mtx->get_descriptor() == NULL) << '\n';
-        std::cout << "after sketched_mtx\n";
         auto context_ref = rls::share(rls::Context<CPU>::create());
         tau = matrix::Dense<rls::CPU, vtype>::create(context_ref, {static_cast<int>(rows_sketch), 1});
     }
