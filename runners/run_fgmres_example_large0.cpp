@@ -130,7 +130,6 @@ int main(int argc, char* argv[])
 //    dim2 sketch_size = {
 //        static_cast<int>(std::ceil(sampling_coeff * mtx->get_size()[1])),
 //        mtx->get_size()[0]};
-//    std::cout << "sketch_size[0]: " << sketch_size[0] << ", sketch_size[1]: " << sketch_size[1] << '\n';
 //
 //    using sketch_type =
 //        rls::GaussianSketch<rls::CUDA, double, double, magma_int_t>;

@@ -290,7 +290,6 @@ std::cout << "SKETCH APPLY\n";
     //    rls::cuda::transpose(s4[0], s4[1], sol->get_values(), s4[0], result->get_values(), s4[1]);
     }
     else if (auto t = dynamic_cast<matrix::Sparse<rls::CUDA, __half, magma_int_t>*>(rhs.get()); t != nullptr) {
-std::cout << "TEST\n";
         auto queue = this->context_->get_queue();
         __half one  = 1.0;
         __half zero = 0.0;
@@ -306,27 +305,15 @@ std::cout << "TEST\n";
         auto rhs_tmp = t->get_mtx();
         gko::dim<2> s3 = {sketch_rows, rhs_cols};
         dim2 s4 = {sketch_rows, rhs_cols};
-        // replace this with sparse
-std::cout << "before create Sol\n";
-        //auto SOL = rls::share(rls::matrix::Sparse<rls::CUDA, __half, magma_int_t>::create( this->context_, s4));
         auto SOL = rls::share(rls::matrix::Sparse<rls::CUDA, __half, magma_int_t>::create(this->context_, s4));
-std::cout << "before apply\n";
         // set nonzeros to SOL
         mtx_->apply(t, SOL.get());
-        std::cout << "\n\n\n";
-        std::cout << "SOL->get_size()[0]: " << SOL->get_size()[0] << '\n';
-        std::cout << "\n\n\n";
         auto T = rls::matrix::Sparse<rls::CUDA, double, int>::create(context_, SOL->get_size(),
             SOL->get_nnz());
         T->copy_from(SOL.get());
-        std::cout << "T->get_values(): \n";
-        rls::io::print_mtx_gpu(5, 1, T->get_values(), SOL->get_nnz(), queue);
 
         //auto s = rls::share(rls::matrix::Dense<rls::CUDA, __half>::create(this->context_, s4));
         auto ts = dim2(size[0], SOL->get_size()[1]);
-std::cout << "ts[0]: " << ts[0] << ", ts[1]: " << ts[1] << '\n';
-std::cout << "s4[0]: " << s4[0] << ", s4[1]: " << s4[1] << '\n';
-std::cout << "SOL->get_size()[0]: " << SOL->get_size()[0] << ", SOL->get_size()[1]: " << SOL->get_size()[1] << '\n';
         //auto s = rls::share(rls::matrix::Dense<rls::CUDA, __half>::create(this->context_, ts));
         SOL->to_dense(result.get());
         //result->copy_from(s.get());
@@ -335,7 +322,6 @@ std::cout << "SOL->get_size()[0]: " << SOL->get_size()[0] << ", SOL->get_size()[
 //@FIX
         //auto s_trans = rls::share(s->transpose());
         //result->copy_from(s_trans.get());
-        std::cout << "end of apply\n";
     }
 }
 

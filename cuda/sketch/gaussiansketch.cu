@@ -62,16 +62,9 @@ void gaussian_sketch_impl(std::shared_ptr<matrix::Dense<CUDA, double>> mtx)
 //    cudaDeviceSynchronize();
     auto context = mtx->get_context();
     auto size = mtx->get_size();
-    std::cout << "size[0]: " << size[0] << ", size[1]: " << size[1] << '\n';
     auto status = curandGenerateNormalDouble(
         context->get_generator(), mtx->get_values(), size[0] * size[1], 0, 1);
     std::cout << "status: " << status << '\n';
-    //{
-    //    auto queue = context->get_queue();
-    //    io::write_mtx("S1.mtx", mtx->get_size()[0], mtx->get_size()[1],
-    //        (double*)mtx->get_values(), mtx->get_ld(), queue);
-    //    std::cout << "<double>\n";
-    //}
 }
 
 void gaussian_sketch_impl(std::shared_ptr<matrix::Dense<CUDA, float>> mtx)
@@ -80,12 +73,6 @@ void gaussian_sketch_impl(std::shared_ptr<matrix::Dense<CUDA, float>> mtx)
     auto size = mtx->get_size();
     auto status = curandGenerateNormal(context->get_generator(), mtx->get_values(), size[0] * size[1], 0, 1);
     std::cout << "status: " << status << '\n';
-    //{
-    //    auto queue = context->get_queue();
-    //    io::write_mtx("S1.mtx", mtx->get_size()[0], mtx->get_size()[1],
-    //        (float*)mtx->get_values(), mtx->get_ld(), queue);
-    //    std::cout << "<float>\n";
-    //}
 }
 
 

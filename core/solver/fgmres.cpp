@@ -631,8 +631,6 @@ void step_2(
         (vtype)1.0, workspace->z_basis->get_values(),
         (int)global_length, hessenberg_rhs_gpu, (int)1, (vtype)0.0,
         sol->get_values(), (int)1);
-
-    // works up to here
 }
 
 template <typename vtype, typename vtype_internal_0,

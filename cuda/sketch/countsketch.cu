@@ -130,8 +130,6 @@ __global__ void set_col_idxs_kernel(double seed, int k, int rows, int cols,
         //col_idxs[row_ptrs[row] + col] = dist(rng);
         col_idxs[k*(row/k) + col] = dist(rng);
         __syncthreads();
-        //printf("row: %d / col: %d --> col_idxs[%d]: %d\n", row, col, k*(row/k) + col, col_idxs[k*(row/k) + col]);
-        //printf("row: %d / col: %d ===> row_ptrs[row] + col: %d >>> %d\n", row, col, row_ptrs[row] + col, col_idxs[row_ptrs[row] + col]);
     }
 }
 
@@ -141,8 +139,6 @@ __global__ void set_row_ptrs_kernel(double seed, int k, int rows, index_type* ro
     auto row = blockDim.y*blockIdx.y + threadIdx.y;
     if (row < rows) {
         row_ptrs[row] = row*k;
-        //if (row == rows - 1)
-        //printf("row_ptrs[%d]: %d ?? rows: %d\n", row, row_ptrs[row], rows);
     }
 }
 
@@ -155,7 +151,6 @@ __global__ void set_values_kernel(double seed, index_type k, index_type rows, va
     auto row = blockDim.y*blockIdx.y + threadIdx.y;
     auto col = blockDim.x*blockIdx.x + threadIdx.x;
 
-    //printf("row: %d, rows: %d, col: %d, k: %d\n", row, rows, col, k);
     if ((row < rows) && (col < k)) {
         thrust::minstd_rand rng(row*30 + seed);
         rng.discard(row);
@@ -163,7 +158,6 @@ __global__ void set_values_kernel(double seed, index_type k, index_type rows, va
         val_int = dist_vals(rng);
         values[row] = (val_int == 0) ? -1.0 : 1.0;
         __syncthreads();
-        //printf("** row: %d / rows: %d <-> col: %d --> values[%d]: %1.2e\n", row, rows, col, row, values[row]);
     }
 }
 
@@ -191,14 +185,10 @@ namespace sketch {
 template <ContextType device_type, typename value_type, typename index_type>
 void countsketch_impl(size_t nnz_per_col, std::shared_ptr<matrix::Sparse<device_type, value_type, index_type>> sketch)
 {
-    //auto mtx = static_cast<gko::matrix::Csr<value_type, index_type>*>
-    //    (sketch->get_mtx().get());
     auto size = sketch->get_size();
     double seed = time(NULL);
     // Sets values.
     {
-        //::dim3 grid_size(
-        //    static_cast<int>(static_cast<int>(nnz_per_col)/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1, size[0]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1));
         ::dim3 grid_size(nnz_per_col/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1, size[0]/CUDA_MAX_NUM_THREADS_PER_BLOCK_2D + 1);
         ::dim3 block_size(CUDA_MAX_NUM_THREADS_PER_BLOCK_2D,
             CUDA_MAX_NUM_THREADS_PER_BLOCK_2D);
@@ -209,9 +199,6 @@ void countsketch_impl(size_t nnz_per_col, std::shared_ptr<matrix::Sparse<device_
 
         auto context = sketch->get_context();
         auto queue = context->get_queue();
-        //std::cout << "size[0]: " << size[0] << ", size[1]: " << size[1] << '\n';
-        //std::cout << "---> values: " << "\n";
-        //io::print_mtx_gpu(size[0], 1, (double*)mtx->get_values(), size[0], queue);
     }
 
     // Sets row_ptrs.
@@ -224,12 +211,6 @@ void countsketch_impl(size_t nnz_per_col, std::shared_ptr<matrix::Sparse<device_
         cudaDeviceSynchronize();
         auto context = sketch->get_context();
         auto queue = context->get_queue();
-
-        //std::cout << "row_ptrs: \n";
-        //io::print_nnz_gpu(size[0]+1, mtx->get_row_ptrs(), queue);
-
-        //std::cout << "---> row_ptrs: " << "\n";
-        //io::print_mtx_gpu(size[0] + 1, 1, (int*)mtx->get_row_ptrs(), size[0] + 1, queue);
     }
 
     // Sets col_idxs.
@@ -243,8 +224,6 @@ void countsketch_impl(size_t nnz_per_col, std::shared_ptr<matrix::Sparse<device_
         cudaDeviceSynchronize();
         auto context = sketch->get_context();
         auto queue = context->get_queue();
-        //std::cout << "---> col_idxs: " << "\n";
-        //io::print_mtx_gpu(size[0], 1, (int*)mtx->get_col_idxs(), size[0], queue);
     }
 }
 

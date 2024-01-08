@@ -72,7 +72,6 @@ void GaussianSketch<device_type, value_type, value_type_apply, index_type>::appl
                    t->get_ld(), zero, result->get_values(), result->get_ld());
     }
     else if (auto t = dynamic_cast<matrix::Sparse<device_type, value_type_apply, index_type>*>(rhs.get()); t != nullptr) {
-    std::cout << ">>>test\n";
         auto context = mtx_->get_context();
         auto exec = context->get_executor();
         value_type_apply one = 1.0;
@@ -81,14 +80,7 @@ void GaussianSketch<device_type, value_type, value_type_apply, index_type>::appl
         auto S = mtx_->transpose();
         auto t1_size = dim2(static_cast<int>(A->get_size()[0]), static_cast<int>(S->get_size()[1]));
         auto t1 = matrix::Dense<device_type, value_type_apply>::create(context, t1_size);
-        std::cout << "before apply" << '\n';
-        std::cout << "sizeof(mtx_->get_values()): " << sizeof(mtx_->get_values()) << '\n';
-        std::cout << "sizeof(value_type_apply): " << sizeof(value_type_apply) << '\n';
         A->apply(one, S.get(), zero, t1.get());
-        // this works also
-        //exec->copy(t1->get_size()[0] * t1->get_size()[1], t1->get_values(),
-        //    result->get_values());
-        std::cout << "t1->get_size(){0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << ", t1->get_ld(): " << t1->get_ld() << '\n';
         utils::convert(context,
             (int)(t1->get_size()[0] * t1->get_size()[1]),
             1,
@@ -119,10 +111,6 @@ GaussianSketch<device_type, value_type, value_type_apply, index_type>::GaussianS
     mtx_ = matrix::Dense<device_type, value_type_apply>::create(context, size);
     mtx_->copy_from(mtx.get());
 }
-
-//template class SketchOperator<CUDA, double, magma_int_t>;
-//template class SketchOperator<CUDA, float, magma_int_t>;
-//template class SketchOperator<CUDA, __half, magma_int_t>;
 
 template class GaussianSketch<CUDA, double, double, magma_int_t>;
 template class GaussianSketch<CUDA, double, float, magma_int_t>;

@@ -99,7 +99,6 @@ int main(int argc, char* argv[]) {
     //using sketch_type =
     //    rls::CountSketch<rls::CUDA, double, double, magma_int_t>;
     //size_t k = 1;
-    //std::cout << "before sketch\n";
     //auto sketch = rls::share(sketch_type::create(context, k, sketch_size));
 
    // Construct preconditioner.

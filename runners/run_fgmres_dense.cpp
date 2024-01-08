@@ -138,8 +138,6 @@ int main(int argc, char* argv[])
 //    precond = rls::share(precond_type::create(mtx, sketch, precond_config));
 //    precond->generate();
 //    //auto precond_mtx = static_cast<rls::preconditioner::GeneralizedSplit<rls::CUDA, double, double, double, magma_int_t>*>(precond.get())->get_precond();
-//    //std::cout << "precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << '\n';
-//    //std::cout << "precond_mtx->get_size()[1]: " << precond_mtx->get_size()[1] << '\n';
 //    //rls::io::write_mtx("sparse_precond.mtx", precond_mtx->get_size()[0],
 //    //    precond_mtx->get_size()[1], precond_mtx->get_values());
 //

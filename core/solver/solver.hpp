@@ -461,22 +461,8 @@ private:
     std::shared_ptr<Context<device_type>> context_;
 };
 
-// private:
-    // double tolerance_ = 1e-8;
-    // magma_int_t max_iter_ = 0;
-    // bool use_precond_ = false;
-    // SolverValueType combined_value_type_;
-    // SolverType type_;
-    // double resnorm_ = 1.0;
-    // magma_int_t iter_ = 0;
-    // logger logger_;
-
-    // void set_logger(logger& logger) {
-        // this->logger_ = logger;
-    // }
-
-// }   // end of namespace solver
 
 }   // end of namespace rls
+
 
 #endif

@@ -80,7 +80,6 @@ int main(int argc, char* argv[]) {
     enum GlobalDataType data_type;
     enum GlobalDataType data_type_precond;
     enum GlobalDataType data_type_solver;
-    std::cout << "init\n";
 
     std::shared_ptr<rls::Context<rls::CUDA>> context = rls::Context<rls::CUDA>::create();
     std::shared_ptr<rls::matrix::Dense<double, rls::CUDA>> mtx = rls::matrix::Dense<double, rls::CUDA>::create(context, input_mtx);
@@ -89,7 +88,6 @@ int main(int argc, char* argv[]) {
 //    // Decides the precision of the gaussian preconditioner depending on the inputs.
     auto precond_prec_type = precision_parser(input_precond_prec, input_precond_in_prec);
     std::shared_ptr<rls::preconditioner::generic_preconditioner<rls::CUDA>> precond;
-    std::cout << "before precond\n";
     switch (precond_prec_type) {
         case 0:
         {

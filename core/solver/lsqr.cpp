@@ -1383,7 +1383,6 @@ template<ContextType device,
 void Lsqr<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>::generate()
 {
     auto size = mtx_->get_size();
-    std::cout << "logger_->record_true_error(): " << logger_->record_true_error() << '\n';
     if (logger_->record_true_error() && (logger_->record_noisy_error())) {
         true_sol_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_true_sol());
         auto noisy_sol = rls::share(rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_noisy_sol()));
@@ -1392,8 +1391,6 @@ void Lsqr<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
             this->get_context(), mtx_, sol_, rhs_, true_sol_, true_error_, noisy_sol);
     }
     else if (logger_->record_true_error()) {
-        std::cout << "true error recording\n";
-        std::cout << "logger_->get_filename_true_sol(): " << logger_->get_filename_true_sol();
         true_sol_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), logger_->get_filename_true_sol());
         true_error_ = rls::matrix::Dense<device, vtype_refine>::create(this->get_context(), dim2(size[1], 1));
         workspace_ = lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>::create(
@@ -1403,7 +1400,6 @@ void Lsqr<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, ityp
         //workspace_ = lsqr::Workspace<device, vtype, vtype_internal, vtype_precond_apply, vtype_refine, itype>::create(
         //    this->get_context(), mtx_, sol_, rhs_);
     }
-    std::cout << "here before compute norm\n";
     workspace_->rhsnorm = blas::norm2(context_, rhs_->get_size()[0], rhs_->get_values(), 1);
 }
 

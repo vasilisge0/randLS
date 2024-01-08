@@ -390,7 +390,6 @@ void run_sparse_reg_lsqr_instance(double tol, int maxiter, int miniter, magma_in
         precond_config = rls::share(precond_config_type::create(sampling_coeff));
         //@error in next line in half precision
         precond = rls::preconditioner::SketchQr<rls::CUDA, double, vtype_precond_internal, vtype_precond_apply, magma_int_t>::create(mtx, sketch, precond_config);
-        //std::cout << "exit\n";
         //std::string str = "../lsqr_data/sprand_03_precond.mtx";
         //precond = rls::preconditioner::SketchQr<rls::CUDA, double, vtype_precond_internal, vtype_precond_apply, magma_int_t>::create(
         //    mtx, str, precond_config);
@@ -460,12 +459,9 @@ void run_fgmres_instance(double tol, int maxiter, int miniter, magma_int_t resta
     auto rhs = rls::share(rls::matrix::Dense<rls::CUDA, double>::create(context, input_rhs));
     auto sol = rls::share(dense::create(context, dim2(mtx->get_size()[1], 1)));
     sol->zeros();
-    std::cout << "sol->get_size()[0]: " << sol->get_size()[0] << '\n';
-    std::cout << "sol->get_ld(): " << sol->get_ld() << '\n';
     std::shared_ptr<rls::Preconditioner> precond;
 
     // -------- Preconditioner construction -------- //
-    std::cout << " in run fgmres\n";
 
     // @error here in half.
     {

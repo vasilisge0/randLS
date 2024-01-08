@@ -171,19 +171,7 @@ int main(int argc, char* argv[])
 //    //auto sop = static_cast<rls::SketchOperator<rls::CUDA, double, magma_int_t>*>(sketch.get());
 //    auto out_mtx = sketch->get_mtx();
 //    char* filename_precond = "test_small_precond.mtx";
-//std::cout << "before write" << '\n';
 //
-//    {
-//        auto size = out_mtx->get_size();
-//        std::cout << "size[0]: " << size[0] << '\n';
-//        std::cout << "size[1]: " << size[1] << '\n';
-//        std::cout << "mtx->get_size()[0]: " << mtx->get_size()[0] << '\n';
-//        std::cout << "mtx->get_size()[1]: " << mtx->get_size()[1] << '\n';
-//        std::cout << "mtx: \n";
-//        //rls::io::print_mtx_gpu(5, 3, mtx->get_values(), 5, context->get_queue());
-//    }
-////rls::io::write_mtx(filename_precond, out_mtx->get_size()[0], out_mtx->get_size()[1], out_mtx->get_values(), out_mtx->get_size()[0], context->get_queue());
-////std::cout << "after write" << '\n';
 //
 // std::shared_ptr<Solver> solver = rls::share(Fgmres::create(context, solver_config, mtx, sol, rhs));
 // solver->run();
