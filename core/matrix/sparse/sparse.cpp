@@ -207,9 +207,7 @@ void Sparse<device_type, value_type, index_type>::apply(Sparse<device_type, valu
 //    Sparse<rls::CUDA, float, magma_int_t>* result)
 //{
 //    mtx_->apply(rhs->get_mtx(), result->get_mtx());
-//}A
-//
-
+//}
 
 template<ContextType device_type, typename value_type, typename index_type>
 void Sparse<device_type, value_type, index_type>::apply(value_type alpha, Dense<device_type, value_type>* rhs, value_type beta, Dense<device_type, value_type>* result)
@@ -248,7 +246,6 @@ template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dens
                             &alpha_float,
                             this->get_descriptor(),
                             rhs->get_descriptor(),
-                            //descr_rhs,
                             &beta_float,
                             result->get_descriptor(),
                             CUDA_R_32F,
@@ -263,7 +260,6 @@ template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dens
                             &alpha_float,
                             this->get_descriptor(),
                             rhs->get_descriptor(),
-                            //descr_rhs,
                             &beta_float,
                             result->get_descriptor(),
                             CUDA_R_32F,
@@ -274,9 +270,8 @@ template<> void Sparse<rls::CUDA, __half, magma_int_t>::apply(__half alpha, Dens
              CUSPARSE_OPERATION_NON_TRANSPOSE,
              CUSPARSE_OPERATION_NON_TRANSPOSE,
              &alpha_float,
-             this->get_descriptor(),  // non-const descriptor supported
-             rhs->get_descriptor(),  // non-const descriptor supported
-             //descr_rhs,
+             this->get_descriptor(),
+             rhs->get_descriptor(),
              &beta_float,
              result->get_descriptor(),
              CUDA_R_32F,
@@ -406,7 +401,6 @@ template<ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<device_type>> context,
     std::shared_ptr<gko::LinOp> mtx) : Mtx<device_type>(context)
 {
-    //this->mtx_ = std::shared_ptr<gko::LinOp>(mtx);
     this->mtx_ = mtx;
     auto exec = context->get_executor();
     //this->nnz_ = exec->copy_val_to_host(&static_cast<gko::matrix::Csr<value_type, index_type>*>(mtx.get())->get_row_ptrs()[mtx->get_size()[0]]);
@@ -441,7 +435,6 @@ Sparse<device_type, value_type, index_type>::Sparse(std::shared_ptr<Context<devi
     col_idxs_ = R->get_col_idxs();
 }
 
-//ok
 template<> Sparse<rls::CUDA, __half, magma_int_t>::Sparse(std::shared_ptr<Context<rls::CUDA>> context, dim2 size) : Mtx<rls::CUDA>(context)
 {
     auto exec = context->get_executor();
@@ -503,13 +496,6 @@ gko::LinOp* Sparse<device_type, value_type, index_type>::get_raw_mtx()
     return mtx_.get();
 }
 
-//template<ContextType device_type, typename value_type, typename index_type>
-//std::shared_ptr<Context<device_type>> Sparse<device_type, value_type, index_type>::get_context()
-//{
-//    return this->get_context_;
-//}
-
-
 template<ContextType device_type, typename value_type, typename index_type>
 Sparse<device_type, value_type, index_type>::~Sparse() {}
 
@@ -548,7 +534,6 @@ Sparse<device_type, value_type, index_type>::Sparse(Sparse<device_type, value_ty
     col_idxs_ = R->get_col_idxs();
 }
 
-//ok
 template<>
 Sparse<rls::CUDA, __half, magma_int_t>::Sparse(Sparse<rls::CUDA, __half, magma_int_t>&& t) : Mtx<rls::CUDA>(t.get_context())
 {
@@ -561,8 +546,6 @@ Sparse<rls::CUDA, __half, magma_int_t>::Sparse(Sparse<rls::CUDA, __half, magma_i
     //row_ptrs_ = R->get_row_ptrs();
     //col_idxs_ = R->get_col_idxs();
 }
-
-
 
 template<>
 template<>
@@ -586,7 +569,7 @@ void Sparse<rls::CUDA, __half, magma_int_t>::copy_from(matrix::Sparse<rls::CUDA,
     this->set_context(mtx->get_context());
     auto s = mtx->get_size();
     this->nnz_ = mtx->get_nnz();
-    // !!! see what to do here.
+    // @FIX this nnz might need updating.
     utils::convert(this->get_context(), static_cast<int>(this->nnz_), 1, mtx->get_values(), static_cast<int>(this->nnz_), this->get_values(), static_cast<int>(this->nnz_));
     auto context = this->get_context();
     auto exec = context->get_executor();
@@ -611,10 +594,7 @@ void Sparse<rls::CUDA, __half, magma_int_t>::copy_from(matrix::Sparse<rls::CUDA,
 // to_impl
 template<> std::unique_ptr<Sparse<rls::CUDA, __half, magma_int_t>> Sparse<rls::CUDA, __half, magma_int_t>::transpose()
 {
-    //std::shared_ptr<gko::LinOp> mtx = static_cast<gko::matrix::Csr<value_type, index_type>*>(this->mtx_.get())->transpose();
-    //return Sparse::create(context_, mtx);
     auto context = this->get_context();
-    std::cout << "size_[1]: " << size_[1] << '\n';
     auto t = Sparse<rls::CUDA, __half, magma_int_t>::create(context, dim2(size_[1], size_[0]), nnz_);
     auto cusparse_handle = context->get_cusparse_handle();
     int m = size_[0];
@@ -651,7 +631,6 @@ template<> std::unique_ptr<Sparse<rls::CUDA, __half, magma_int_t>> Sparse<rls::C
 
     void* buffer = nullptr;
     cudaMalloc(&buffer, buffer_size);
-    std::cout << "buffer_size: " << buffer_size << '\n';
     cusparseCsr2cscEx2(
         cusparse_handle,
         m,
@@ -671,7 +650,6 @@ template<> std::unique_ptr<Sparse<rls::CUDA, __half, magma_int_t>> Sparse<rls::C
     );
     cudaFree(buffer);
 
-    std::cout << "after\n";
     return t;
 }
 
