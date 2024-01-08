@@ -108,10 +108,6 @@ private:
     cusparseSpMatDescr_t descr_;
 };
 
-//template class Sparse<CUDA, double, magma_int_t>;
-//template class Sparse<CUDA, float, magma_int_t>;
-//template class Sparse<CUDA, __half, magma_int_t>; // To be added eventually.
-
 
 } // end of namespace matrix
 } // end of namespace rls

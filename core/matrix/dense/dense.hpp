@@ -110,7 +110,6 @@ private:
 
     Dense<device_type, value_type>& operator=(Dense<device_type, value_type>&& mtx);
 
-    //dim2 size_ = {0, 0};
     magma_int_t ld_ = 0;
     magma_int_t alloc_elems = 0;
     value_type* values_ = nullptr;
