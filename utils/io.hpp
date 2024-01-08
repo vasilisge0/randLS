@@ -89,6 +89,9 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, int* dmtx, magma_
 template<ContextType device_type>
 void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, __half* dmtx, magma_int_t ld);
 
+template<ContextType device_type>
+void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld);
+
 void write_output(const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t max_iter,
     double sampling_coeff, magma_int_t sampled_rows, double t_precond, double t_solve, double t_total,
     magma_int_t iter, double relres);

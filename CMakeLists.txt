@@ -89,30 +89,30 @@ target_include_directories(mmio PUBLIC
 #    #-std=c++14 ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lcudart -lcurand -lcudadevrt ${GINKGO_LIB}/libginkgo.so
 #)
 
-# run_lsqr
-
-add_executable(run_lsqr runners/run_lsqr.cpp)
-add_dependencies(run_lsqr mmio)
-add_dependencies(run_lsqr mix_n_pick)
-# find_library(MAGMA_LIB libmagma.so)
-target_include_directories(run_lsqr PUBLIC
-    .
-    ../
-    include/
-    core/sketch
-    ${MAGMA_INC}
-    ${CUDA_INC}
-    ${RANDLS_INC}
-    ${GINKGO_INC}
-)
-set_target_properties(run_lsqr PROPERTIES 
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    LINKER_LANGUAGE CUDA)
-target_link_libraries(run_lsqr
-   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
-)
+## run_lsqr
+#
+#add_executable(run_lsqr runners/run_lsqr.cpp)
+#add_dependencies(run_lsqr mmio)
+#add_dependencies(run_lsqr mix_n_pick)
+## find_library(MAGMA_LIB libmagma.so)
+#target_include_directories(run_lsqr PUBLIC
+#    .
+#    ../
+#    include/
+#    core/sketch
+#    ${MAGMA_INC}
+#    ${CUDA_INC}
+#    ${RANDLS_INC}
+#    ${GINKGO_INC}
+#)
+#set_target_properties(run_lsqr PROPERTIES 
+#    CXX_STANDARD 14
+#    CXX_STANDARD_REQUIRED YES
+#    CXX_EXTENSIONS NO
+#    LINKER_LANGUAGE CUDA)
+#target_link_libraries(run_lsqr
+#   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
+#)
 
 # run_lsqr_sparse_all
 
@@ -139,39 +139,13 @@ target_link_libraries(run_lsqr_sparse_all
    -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
 )
 
-# run_fgmres_sparse_all
-
-add_executable(run_fgmres_sparse_all runners/run_fgmres_sparse_all.cpp)
-add_dependencies(run_fgmres_sparse_all mmio)
-add_dependencies(run_fgmres_sparse_all mix_n_pick)
-# find_library(MAGMA_LIB libmagma.so)
-target_include_directories(run_fgmres_sparse_all PUBLIC
-    .
-    ../
-    include/
-    core/sketch
-    ${MAGMA_INC}
-    ${CUDA_INC}
-    ${RANDLS_INC}
-    ${GINKGO_INC}
-)
-set_target_properties(run_fgmres_sparse_all PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    LINKER_LANGUAGE CUDA)
-target_link_libraries(run_fgmres_sparse_all
-   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
-)
-
-
-## run_lsqr_all
+## run_fgmres_sparse_all
 #
-#add_executable(run_lsqr_all runners/run_lsqr_all.cpp)
-#add_dependencies(run_lsqr_all mmio)
-#add_dependencies(run_lsqr_all mix_n_pick)
+#add_executable(run_fgmres_sparse_all runners/run_fgmres_sparse_all.cpp)
+#add_dependencies(run_fgmres_sparse_all mmio)
+#add_dependencies(run_fgmres_sparse_all mix_n_pick)
 ## find_library(MAGMA_LIB libmagma.so)
-#target_include_directories(run_lsqr_all PUBLIC
+#target_include_directories(run_fgmres_sparse_all PUBLIC
 #    .
 #    ../
 #    include/
@@ -181,46 +155,123 @@ target_link_libraries(run_fgmres_sparse_all
 #    ${RANDLS_INC}
 #    ${GINKGO_INC}
 #)
-#set_target_properties(run_lsqr_all PROPERTIES
+#set_target_properties(run_fgmres_sparse_all PROPERTIES
 #    CXX_STANDARD 14
 #    CXX_STANDARD_REQUIRED YES
 #    CXX_EXTENSIONS NO
 #    LINKER_LANGUAGE CUDA)
-#target_link_libraries(run_lsqr_all
+#target_link_libraries(run_fgmres_sparse_all
 #   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
 #)
 
-## run_fgmres
-#
-#add_executable(run_fgmres runners/run_fgmres.cpp)
-#add_dependencies(run_fgmres mmio)
-#add_dependencies(run_fgmres mix_n_pick)
-## find_library(MAGMA_LIB libmagma.so)
-#target_include_directories(run_fgmres PUBLIC
-#    .
-#    ../
-#    include/
-#    ${MAGMA_INC}
-#    ${CUDA_INC}
-#    ${RANDLS_INC}
-#    ${GINKGO_INC}
-#)
-#set_target_properties(run_fgmres PROPERTIES 
-#    CXX_STANDARD 14
-#    CXX_STANDARD_REQUIRED YES
-#    CXX_EXTENSIONS NO
-#    LINKER_LANGUAGE CUDA)
-#target_link_libraries(run_fgmres
-#   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so
-#)
 
-## run_fgmres_example0
+### run_lsqr_all
+##
+##add_executable(run_lsqr_all runners/run_lsqr_all.cpp)
+##add_dependencies(run_lsqr_all mmio)
+##add_dependencies(run_lsqr_all mix_n_pick)
+### find_library(MAGMA_LIB libmagma.so)
+##target_include_directories(run_lsqr_all PUBLIC
+##    .
+##    ../
+##    include/
+##    core/sketch
+##    ${MAGMA_INC}
+##    ${CUDA_INC}
+##    ${RANDLS_INC}
+##    ${GINKGO_INC}
+##)
+##set_target_properties(run_lsqr_all PROPERTIES
+##    CXX_STANDARD 14
+##    CXX_STANDARD_REQUIRED YES
+##    CXX_EXTENSIONS NO
+##    LINKER_LANGUAGE CUDA)
+##target_link_libraries(run_lsqr_all
+##   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lcublas -lcusparse -lmix_n_pick -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
+##)
 #
-#add_executable(run_fgmres_example0 runners/run_fgmres_example0.cpp)
-#add_dependencies(run_fgmres_example0 mmio)
-#add_dependencies(run_fgmres_example0 mix_n_pick)
+### run_fgmres
+##
+##add_executable(run_fgmres runners/run_fgmres.cpp)
+##add_dependencies(run_fgmres mmio)
+##add_dependencies(run_fgmres mix_n_pick)
+### find_library(MAGMA_LIB libmagma.so)
+##target_include_directories(run_fgmres PUBLIC
+##    .
+##    ../
+##    include/
+##    ${MAGMA_INC}
+##    ${CUDA_INC}
+##    ${RANDLS_INC}
+##    ${GINKGO_INC}
+##)
+##set_target_properties(run_fgmres PROPERTIES 
+##    CXX_STANDARD 14
+##    CXX_STANDARD_REQUIRED YES
+##    CXX_EXTENSIONS NO
+##    LINKER_LANGUAGE CUDA)
+##target_link_libraries(run_fgmres
+##   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so
+##)
+#
+### run_fgmres_example0
+##
+##add_executable(run_fgmres_example0 runners/run_fgmres_example0.cpp)
+##add_dependencies(run_fgmres_example0 mmio)
+##add_dependencies(run_fgmres_example0 mix_n_pick)
+### find_library(MAGMA_LIB libmagma.so)
+##target_include_directories(run_fgmres_example0 PUBLIC
+##    .
+##    ../
+##    include/
+##    ${MAGMA_INC}
+##    ${CUDA_INC}
+##    ${RANDLS_INC}
+##    ${GINKGO_INC}
+##    ${HOME}/ginkgo_clone_install/include
+##)
+##set_target_properties(run_fgmres_example0 PROPERTIES
+##    CXX_STANDARD 14
+##    CXX_STANDARD_REQUIRED YES
+##    CXX_EXTENSIONS NO
+##    LINKER_LANGUAGE CUDA)
+##target_link_libraries(run_fgmres_example0
+##   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so
+##)
+#
+#
+## run_fgmres_example_large0
+#
+##add_executable(run_fgmres_example_large0 runners/run_fgmres_example_large0.cpp)
+##add_dependencies(run_fgmres_example_large0 mmio)
+##add_dependencies(run_fgmres_example_large0 mix_n_pick)
+### find_library(MAGMA_LIB libmagma.so)
+##target_include_directories(run_fgmres_example_large0 PUBLIC
+##    .
+##    ../
+##    include/
+##    ${MAGMA_INC}
+##    ${CUDA_INC}
+##    ${RANDLS_INC}
+##    ${GINKGO_INC}
+##    ${HOME}/ginkgo_clone_install/include
+##)
+##set_target_properties(run_fgmres_example_large0 PROPERTIES
+##    CXX_STANDARD 14
+##    CXX_STANDARD_REQUIRED YES
+##    CXX_EXTENSIONS NO
+##    LINKER_LANGUAGE CUDA)
+##target_link_libraries(run_fgmres_example_large0
+##   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
+##)
+#
+## run_fgmres_sparse_small
+#
+#add_executable(run_fgmres_sparse_small runners/run_fgmres_sparse_small.cpp)
+#add_dependencies(run_fgmres_sparse_small mmio)
+#add_dependencies(run_fgmres_sparse_small mix_n_pick)
 ## find_library(MAGMA_LIB libmagma.so)
-#target_include_directories(run_fgmres_example0 PUBLIC
+#target_include_directories(run_fgmres_sparse_small PUBLIC
 #    .
 #    ../
 #    include/
@@ -230,112 +281,61 @@ target_link_libraries(run_fgmres_sparse_all
 #    ${GINKGO_INC}
 #    ${HOME}/ginkgo_clone_install/include
 #)
-#set_target_properties(run_fgmres_example0 PROPERTIES
+#set_target_properties(run_fgmres_sparse_small PROPERTIES
 #    CXX_STANDARD 14
 #    CXX_STANDARD_REQUIRED YES
 #    CXX_EXTENSIONS NO
 #    LINKER_LANGUAGE CUDA)
-#target_link_libraries(run_fgmres_example0
-#   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so
-#)
-
-
-# run_fgmres_example_large0
-
-#add_executable(run_fgmres_example_large0 runners/run_fgmres_example_large0.cpp)
-#add_dependencies(run_fgmres_example_large0 mmio)
-#add_dependencies(run_fgmres_example_large0 mix_n_pick)
-## find_library(MAGMA_LIB libmagma.so)
-#target_include_directories(run_fgmres_example_large0 PUBLIC
-#    .
-#    ../
-#    include/
-#    ${MAGMA_INC}
-#    ${CUDA_INC}
-#    ${RANDLS_INC}
-#    ${GINKGO_INC}
-#    ${HOME}/ginkgo_clone_install/include
-#)
-#set_target_properties(run_fgmres_example_large0 PROPERTIES
-#    CXX_STANDARD 14
-#    CXX_STANDARD_REQUIRED YES
-#    CXX_EXTENSIONS NO
-#    LINKER_LANGUAGE CUDA)
-#target_link_libraries(run_fgmres_example_large0
+#target_link_libraries(run_fgmres_sparse_small
 #   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
 #)
-
-# run_fgmres_sparse_small
-
-add_executable(run_fgmres_sparse_small runners/run_fgmres_sparse_small.cpp)
-add_dependencies(run_fgmres_sparse_small mmio)
-add_dependencies(run_fgmres_sparse_small mix_n_pick)
-# find_library(MAGMA_LIB libmagma.so)
-target_include_directories(run_fgmres_sparse_small PUBLIC
-    .
-    ../
-    include/
-    ${MAGMA_INC}
-    ${CUDA_INC}
-    ${RANDLS_INC}
-    ${GINKGO_INC}
-    ${HOME}/ginkgo_clone_install/include
-)
-set_target_properties(run_fgmres_sparse_small PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    LINKER_LANGUAGE CUDA)
-target_link_libraries(run_fgmres_sparse_small
-   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
-)
-
-# run_fgmres_dense
-
-add_executable(run_fgmres_dense runners/run_fgmres_dense.cpp)
-add_dependencies(run_fgmres_dense mmio)
-add_dependencies(run_fgmres_dense mix_n_pick)
-# find_library(MAGMA_LIB libmagma.so)
-target_include_directories(run_fgmres_dense PUBLIC
-    .
-    ../
-    include/
-    ${MAGMA_INC}
-    ${CUDA_INC}
-    ${RANDLS_INC}
-    ${GINKGO_INC}
-    ${HOME}/ginkgo_clone_install/include
-)
-set_target_properties(run_fgmres_dense PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    LINKER_LANGUAGE CUDA)
-target_link_libraries(run_fgmres_dense
-   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
-)
-
-# run_lsqr_sparse
-
-add_executable(run_lsqr_sparse runners/run_lsqr_sparse.cpp)
-add_dependencies(run_lsqr_sparse mmio)
-add_dependencies(run_lsqr_sparse mix_n_pick)
-# find_library(MAGMA_LIB libmagma.so)
-target_include_directories(run_lsqr_sparse PUBLIC
-    .
-    ../
-    include/
-    ${MAGMA_INC}
-    ${CUDA_INC}
-    ${RANDLS_INC}
-    ${GINKGO_INC}
-    ${HOME}/ginkgo_clone_install/include
-)
-set_target_properties(run_lsqr_sparse PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    LINKER_LANGUAGE CUDA)
-target_link_libraries(run_lsqr_sparse
-   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
-)
+#
+## run_fgmres_dense
+#
+#add_executable(run_fgmres_dense runners/run_fgmres_dense.cpp)
+#add_dependencies(run_fgmres_dense mmio)
+#add_dependencies(run_fgmres_dense mix_n_pick)
+## find_library(MAGMA_LIB libmagma.so)
+#target_include_directories(run_fgmres_dense PUBLIC
+#    .
+#    ../
+#    include/
+#    ${MAGMA_INC}
+#    ${CUDA_INC}
+#    ${RANDLS_INC}
+#    ${GINKGO_INC}
+#    ${HOME}/ginkgo_clone_install/include
+#)
+#set_target_properties(run_fgmres_dense PROPERTIES
+#    CXX_STANDARD 14
+#    CXX_STANDARD_REQUIRED YES
+#    CXX_EXTENSIONS NO
+#    LINKER_LANGUAGE CUDA)
+#target_link_libraries(run_fgmres_dense
+#   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
+#)
+#
+## run_lsqr_sparse
+#
+#add_executable(run_lsqr_sparse runners/run_lsqr_sparse.cpp)
+#add_dependencies(run_lsqr_sparse mmio)
+#add_dependencies(run_lsqr_sparse mix_n_pick)
+## find_library(MAGMA_LIB libmagma.so)
+#target_include_directories(run_lsqr_sparse PUBLIC
+#    .
+#    ../
+#    include/
+#    ${MAGMA_INC}
+#    ${CUDA_INC}
+#    ${RANDLS_INC}
+#    ${GINKGO_INC}
+#    ${HOME}/ginkgo_clone_install/include
+#)
+#set_target_properties(run_lsqr_sparse PROPERTIES
+#    CXX_STANDARD 14
+#    CXX_STANDARD_REQUIRED YES
+#    CXX_EXTENSIONS NO
+#    LINKER_LANGUAGE CUDA)
+#target_link_libraries(run_lsqr_sparse
+#   -std=c++14 -L${PROJECT_BINARY_DIR} ${MAGMA_LIB}/libmagma.so -lmix_n_pick -lcublas -lcusparse -lmmio -lcudart -lcurand ${GINKGO_LIB}/libginkgo.so ${GINKGO_LIB}/libginkgo_reference.so ${GINKGO_LIB}/libginkgo_omp.so  ${GINKGO_LIB}/libginkgo_cuda.so ${GINKGO_LIB}/libginkgo_hip.so ${GINKGO_LIB}/libginkgo_dpcpp.so ${GINKGO_LIB}/libginkgo_device.so
+#)

@@ -82,8 +82,12 @@ struct state {
             static_cast<matrix::Sparse<device, vtype_internal, index_type>*>(mtx.get())->copy_from(t_in);
             auto queue = context->get_queue();
         }
+        std::cout << "before sketched_mtx\n";
         sketched_mtx = matrix::Dense<device, vtype_internal>::create(
             context, {static_cast<int>(this->ld_r_factor), this->size[1]});
+        std::cout << "static_cast<int>(this->ld_r_factor): " << static_cast<int>(this->ld_r_factor) << ", this->size[1]: " << this->size[1] << '\n';
+        std::cout << "(sketched_mtx->get_descriptor() == NULL): " << (sketched_mtx->get_descriptor() == NULL) << '\n';
+        std::cout << "after sketched_mtx\n";
         auto context_ref = rls::share(rls::Context<CPU>::create());
         tau = matrix::Dense<rls::CPU, vtype>::create(context_ref, {static_cast<int>(rows_sketch), 1});
     }
@@ -154,6 +158,8 @@ private:
     std::shared_ptr<matrix::Dense<device, vtype_precond_apply>>
         precond_mtx_apply_;
     std::shared_ptr<matrix::Dense<device, vtype_precond_apply>> t_apply;
+    std::shared_ptr<matrix::Dense<device, vtype>> t;
+    std::shared_ptr<matrix::Dense<device, vtype>> t0;
 };
 
 //template<> class SketchQr<CUDA, double, double, double, magma_int_t>;

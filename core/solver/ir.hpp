@@ -38,8 +38,8 @@ public:
     void run()
     {
         for (auto r = 0; r < restarts_; r++) {
-            solver_->run();
             std::cout << "r: " << r << "/" << restarts_ << '\n';
+            solver_->run();
             if (solver_->converges()) {
                 break;
             }

@@ -58,6 +58,7 @@ std::shared_ptr<Context<device_type>> PrecondOperator<device_type, value_type_ap
 
 template class PrecondOperator<rls::CUDA, double, magma_int_t>;
 template class PrecondOperator<rls::CUDA, float, magma_int_t>;
+template class PrecondOperator<rls::CUDA, __half, magma_int_t>;
 
 
 }   // end of namespace rls

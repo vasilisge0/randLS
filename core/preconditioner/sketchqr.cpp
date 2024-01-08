@@ -14,74 +14,39 @@ namespace preconditioner {
 
 
 template <ContextType device, typename vtype,
-         typename vtype_internalternal, typename index_type>
+         typename vtype_internal, typename index_type>
 int sketch_qr_impl(
     std::shared_ptr<Context<device>> context,
     std::shared_ptr<
-        SketchOperator<device, vtype_internalternal, index_type>>
+        SketchOperator<device, vtype_internal, index_type>>
         sketch,
     std::shared_ptr<MtxOp<device>> mtx,
     std::shared_ptr<matrix::Dense<device, vtype>> precond_mtx,
-    state<device, vtype, vtype_internalternal, index_type>* state)
+    state<device, vtype, vtype_internal, index_type>* state)
 {
     auto num_rows_mtx = mtx->get_size()[0];
     auto num_rows_sketch = state->sketched_mtx->get_size()[0];
     auto num_cols_mtx = state->sketched_mtx->get_size()[1];
     auto ld_r_factor = state->sketched_mtx->get_ld();
-
-
+    state->sketched_mtx->zeros();
     sketch->apply(state->mtx, state->sketched_mtx); // Copy to state->mtx outside of sketch_qr_impl.
+    auto queue = context->get_queue();
     index_type info_qr = 0;
-    //precond_mtx->copy_from(state->sketched_mtx.get());
-
-
-    //{
-    //    auto queue = context->get_queue();
-
-    //std::cout << "after copy\n";
-    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1],
-    //    state->sketched_mtx->get_values(), precond_mtx->get_ld());
-    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1],
-    //    precond_mtx->get_values(), precond_mtx->get_ld());
-
-    //    std::cout << "\n\n\nbefore qr:\n";
-    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
-    //    //io::write_mtx_gpu(context, "Sprecon.mtx", precond_mtx->get_size()[0]*precond_mtx->get_size()[1], precond_mtx->get_values());
-    //    std::cout << "state->sketched_mtx->get_size()[0]: " << state->sketched_mtx->get_size()[0] << '\n';
-    //    //io::scan_for_nan_gpu(context, state->sketched_mtx->get_size()[0], state->sketched_mtx->get_size()[1], state->sketched_mtx->get_values(), state->sketched_mtx->get_ld());
-    //    //io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
-    //    std::cout << "precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << "\n";
-    //    std::cout << "precond_mtx->get_ld(): " << precond_mtx->get_ld() << "\n";
-    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], 3, precond_mtx->get_values(), precond_mtx->get_ld());
-    //}
-
-    //blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
-    //             precond_mtx->get_values(), ld_r_factor,
-    //             state->tau->get_values(), &info_qr);
-    //std::cout << "info_qr: " << info_qr << '\n';
-    //{
-    //    auto queue = context->get_queue();
-
-    //    //std::cout << "tau: \n";
-    //    //io::scan_for_nan_gpu(context, state->tau->get_ld(), 1, state->tau->get_values(), state->tau->get_ld());
-
-    //    std::cout << "\n\n\nafter qr:\n";
-    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
-    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
-
-    //    std::cout << "ld_r_factor: " << ld_r_factor << '\n';
-    //    std::cout <<" num_rows_sketch: " << num_rows_sketch << '\n';
-    //}
-    //dim2 s = {ld_r_factor, num_cols_mtx};
-    //cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
-    //std::cout << "\n\n\nprecond:\n";
-    //{
-    //    auto queue = context->get_queue();
-    //    io::print_mtx_gpu(3, 3, precond_mtx->get_values(), precond_mtx->get_ld(), queue);
-
-    //    io::scan_for_nan_gpu(context, precond_mtx->get_size()[0], precond_mtx->get_size()[1], precond_mtx->get_values(), precond_mtx->get_ld());
-    //}
-    //std::cout << "\n\n\n\n";
+    std::cout << "state->sketched_mtx->get_size()[0]: " << state->sketched_mtx->get_size()[0] << "\n";;
+    std::cout << "state->sketched_mtx->get_size()[1]: " << state->sketched_mtx->get_size()[1] << "\n";;
+    std::cout << "state->sketched_mtx->get_ld(): " << state->sketched_mtx->get_ld() << "\n";;
+    std::cout << "        precond_mtx->get_size()[0]: " << precond_mtx->get_size()[0] << "\n";;
+    std::cout << "        precond_mtx->get_size()[1]: " << precond_mtx->get_size()[1] << "\n";;
+    std::cout << "        precond_mtx->get_ld(): " << precond_mtx->get_ld() << "\n";;
+    precond_mtx->copy_from(state->sketched_mtx.get());
+    //precond_mtx->zeros();
+    io::print_mtx_gpu(5, 5, precond_mtx->get_values(), precond_mtx->get_size()[0], queue);
+    blas::geqrf2(context, num_rows_sketch, num_cols_mtx,
+                 precond_mtx->get_values(), ld_r_factor,
+                 state->tau->get_values(), &info_qr);
+    std::cout << "info_qr: " << info_qr << '\n';
+    dim2 s = {ld_r_factor, num_cols_mtx};
+    cuda::set_upper_triang(s, precond_mtx->get_values(), precond_mtx->get_size()[0]);
     return info_qr;
 }
 
@@ -115,6 +80,24 @@ template int sketch_qr_impl(
     std::shared_ptr<matrix::Dense<rls::CUDA, float>> precond_mtx,
     state<rls::CUDA, float, double, magma_int_t>* state);
 
+template int sketch_qr_impl(
+    std::shared_ptr<Context<rls::CUDA>> context,
+    std::shared_ptr<
+        SketchOperator<rls::CUDA, __half, magma_int_t>>
+        sketch,
+    std::shared_ptr<MtxOp<rls::CUDA>> mtx,
+    std::shared_ptr<matrix::Dense<rls::CUDA, float>> precond_mtx,
+    state<rls::CUDA, float, __half, magma_int_t>* state);
+
+template int sketch_qr_impl(
+    std::shared_ptr<Context<rls::CUDA>> context,
+    std::shared_ptr<
+        SketchOperator<rls::CUDA, float, magma_int_t>>
+        sketch,
+    std::shared_ptr<MtxOp<rls::CUDA>> mtx,
+    std::shared_ptr<matrix::Dense<rls::CUDA, float>> precond_mtx,
+    state<rls::CUDA, float, float, magma_int_t>* state);
+
 
 template<ContextType device,
          typename vtype,
@@ -140,7 +123,7 @@ template<ContextType device,
          typename vtype_internal,
          typename vtype_precond_apply,
          typename index_type>
-static std::unique_ptr<SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>> 
+std::unique_ptr<SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>>
     SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::create(
     std::shared_ptr<MtxOp<device>> mtx,
     std::string& filename_precond,
@@ -158,17 +141,16 @@ template <ContextType device, typename vtype,
       typename index_type>
 void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::generate()
 {
-    //@error here
-    std::cout << "before sketch_qr_impl\n";
     auto info_qr = sketch_qr_impl(context_, sketch_, mtx_, precond_mtx_, state_);
-    std::cout << "after sketch_qr_impl\n";
     if (info_qr != 0) {
         magma_xerbla("geqrf2_gpu", info_qr);
     }
-    //@error here
     blas::trtri(context_, MagmaUpper, MagmaNonUnit, precond_mtx_->get_size()[1],
                 precond_mtx_->get_values(), precond_mtx_->get_ld(), &info_qr);
     precond_mtx_apply_->copy_from(precond_mtx_.get());
+    std::cout << "sizeof(*(precond_mtx_apply_->get_values()): " << sizeof(*(precond_mtx_apply_->get_values())) << "\n";
+    std::cout << "sizeof(*(precond_mtx_->get_values())): " << sizeof(*(precond_mtx_->get_values())) << "\n";
+    auto v = precond_mtx_apply_->get_values();
 }
 
 
@@ -183,12 +165,13 @@ void SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::a
     vtype_precond_apply one = 1.0;
     vtype_precond_apply zero = 0.0;
     auto queue = context->get_queue();
-    //io::print_mtx_gpu(size[1], 1, precond_mtx_apply_->get_values() + size[0]*size[1] - size[0], size[0], queue);
-    //
     blas::gemv(context, trans, size[1], size[1], one, precond_mtx_apply_->get_values(),
-        size[0], u_vector_part_1->get_values(), 1, zero, t_apply->get_values(), 1);
+               size[0], u_vector_part_1->get_values(), 1, zero, t_apply->get_values(), 1);
     cudaDeviceSynchronize();
-    exec->copy(size[1], t_apply->get_values(), u_vector_part_1->get_values());
+    //exec->copy(size[1], t_apply->get_values(), u_vector_part_1->get_values());
+    //std::cout << "apply\n";
+    std::cout << "u_vector_part_1->get_ld(): " << u_vector_part_1->get_ld() << '\n';
+    u_vector_part_1->copy_from(t_apply.get());
 }
 
 template <ContextType device, typename vtype,
@@ -216,6 +199,8 @@ SketchQr<device, vtype, vtype_internal, vtype_precond_apply, index_type>::Sketch
     state_ = new state<device, vtype, vtype_internal, index_type>(
         mtx_.get(), size, sampled_rows, sampled_rows, mtx->get_size()[0]);
     t_apply = matrix::Dense<device, vtype_precond_apply>::create(context_, dim2(size[1], 1));
+    t = matrix::Dense<device, vtype>::create(context_, dim2(size[1], 1));
+    t0 = matrix::Dense<device, vtype>::create(context_, dim2(size[1], 1));
     sketch_ = sketch;
     this->precond_mtx_ = matrix::Dense<device, vtype>::create(context_, dim2(sketch->get_size()[0], mtx->get_size()[1]));
     this->precond_mtx_apply_ = matrix::Dense<device, vtype_precond_apply>::create(context_, {sketch->get_size()[0], mtx->get_size()[1]});
@@ -252,6 +237,10 @@ template class SketchQr<CUDA, float, float, float, magma_int_t>;
 template class SketchQr<CUDA, float, __half, float, magma_int_t>;
 template class SketchQr<CUDA, double, __half, double, magma_int_t>;
 template class SketchQr<CUDA, double, __half, float, magma_int_t>;
+template class SketchQr<CUDA, double, __half, __half, magma_int_t>;
+template class SketchQr<CUDA, double, double, __half, magma_int_t>;
+template class SketchQr<CUDA, double, float, __half, magma_int_t>;
+template class SketchQr<CUDA, float, float, __half, magma_int_t>;
 
 
 }  // end of namespace preconditioner

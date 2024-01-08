@@ -12,13 +12,15 @@ template <typename value_type_in, typename value_type_out, typename index_type>
 void convert(std::shared_ptr<Context<CUDA>> context, index_type num_rows, index_type num_cols, value_type_in* values_in, index_type ld_in,
              value_type_out* values_out, index_type ld_out)
 {
-    if (typeid(value_type_in) != typeid(value_type_out)) {
-        cuda::convert(num_rows, num_cols, values_in, ld_in, values_out, ld_out);
-    }
-    else
-    {
-        cuda::convert(num_rows, num_cols, values_in, ld_in, values_out, ld_out);
-    }
+    //if (typeid(value_type_in) != typeid(value_type_out)) {
+    //    cuda::convert(num_rows, num_cols, values_in, ld_in, values_out, ld_out);
+    //}
+    //else
+    //{
+    //    cuda::convert(num_rows, num_cols, values_in, ld_in, values_out, ld_out);
+    //}
+    cuda::convert(num_rows, num_cols, values_in, ld_in, values_out, ld_out);
+    //cuda::convert(num_rows*num_cols, 1, values_in, num_rows*num_cols, values_out, num_rows*num_cols);
 }
 
 template <typename value_type_in, typename value_type_out, typename index_type>

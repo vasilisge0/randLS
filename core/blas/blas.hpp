@@ -158,6 +158,8 @@ inline void gemv(std::shared_ptr<Context<CUDA>> context, magma_trans_t trans,
           magma_int_t inc_v)
 {
     cudaDeviceSynchronize();
+        std::cout << "num_rows: " << num_rows << ", num_cols: " << num_cols << '\n';
+        std::cout << "ld: " << ld << '\n';
     magma_dgemv(trans, num_rows, num_cols, alpha, mtx, ld, u_vector,
                 inc_u, beta, v_vector, inc_v, context->get_queue());
     //magma_dgemv(trans, num_rows, num_cols, alpha, mtx, ld, u_vector,
@@ -184,8 +186,7 @@ inline void gemv(std::shared_ptr<Context<CUDA>> context, magma_trans_t trans,
 {
     if (trans == MagmaNoTrans) {
         magma_hgemm(MagmaNoTrans, MagmaNoTrans, num_rows, 1, num_cols, alpha,
-                    mtx, ld, u_vector, ld, beta, v_vector, ld,
-                    context->get_queue());
+                    mtx, ld, u_vector, ld, beta, v_vector, ld, context->get_queue());
     } else if (trans == MagmaTrans) {
         magma_hgemm(MagmaTrans, MagmaNoTrans, num_cols, 1, num_rows, alpha, mtx,
                     ld, u_vector, ld, beta, v_vector, ld, context->get_queue());

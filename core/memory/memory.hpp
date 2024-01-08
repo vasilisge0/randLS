@@ -14,6 +14,7 @@ namespace memory {
 template <typename value_type, ContextType device=CPU>
 void zeros(dim2 size, value_type* values);
 
+
 template <typename value_type, ContextType device=CUDA>
 void eye(dim2 size, value_type* values);
 

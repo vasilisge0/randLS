@@ -829,6 +829,7 @@ void step_1(std::shared_ptr<Context<device>> context,
     blas::axpy(context, num_cols, -(workspace->beta), workspace->v->get_values(), 1,
                workspace->temp1->get_values(), 1);
     workspace->alpha = blas::norm2(context, num_cols, workspace->temp1->get_values(), inc);
+    std::cout << "beta: " << workspace->beta << ", alpha: " << workspace->alpha << "\n";
     blas::scale(context, num_cols, 1 / workspace->alpha, workspace->temp1->get_values(), inc);
     blas::copy(context, num_cols, workspace->temp1->get_values(), inc, workspace->v->get_values(), inc);
 }
@@ -911,6 +912,8 @@ void step_2(std::shared_ptr<Context<device>> context,
     workspace->rho_bar = -c * workspace->alpha;
     auto phi = c * (workspace->phi_bar);
     workspace->phi_bar = s * (workspace->phi_bar);
+
+    // @1
     if (!std::is_same<vtype, vtype_precond_apply>::value) {
         workspace->v_apply_->copy_from(workspace->w.get());
         auto precond_operator = static_cast<PrecondOperator<device, vtype_precond_apply, itype>*>(precond);
@@ -923,6 +926,7 @@ void step_2(std::shared_ptr<Context<device>> context,
         precond_operator->apply(context, MagmaNoTrans, workspace->temp1.get());
         workspace->temp_refine_->copy_from(workspace->temp1.get());
     }
+
     blas::axpy(context, num_cols, static_cast<vtype_refine>(phi / rho), workspace->temp_refine_->get_values(), 1, sol, 1);
     // Compute new vector w.
     blas::scale(context, num_cols, -(theta / rho), workspace->w->get_values(), inc);
@@ -1087,16 +1091,17 @@ bool check_stopping_criteria(std::shared_ptr<Context<device>> context,
         }
 #if VISUALS
     std::cout << workspace->completed_iterations << " / ";
-    std::cout << std::setprecision(4) << workspace->resnorm;
+    std::cout << std::setprecision(8) << workspace->resnorm * workspace->rhsnorm << ", ";
+    std::cout << std::setprecision(8) << workspace->resnorm;
     std::cout << " / true_error: ";
-    std::cout << true_error << " / ";
+    std::cout << std::setprecision(4) << true_error << " / ";
     std::cout << " noisy_error: ";
     std::cout << noisy_error << " \n ";
 #endif
     }
     else
     {
-        std::cout << "**** "; 
+        std::cout << "**** ";
         std::cout << workspace->completed_iterations << " / ";
         std::cout << std::setprecision(15) << workspace->resnorm << '\n';
     }
@@ -1283,6 +1288,14 @@ template class Lsqr<CUDA, double, float, float, double, magma_int_t>;
 template class Lsqr<CUDA, double, float, double, double, magma_int_t>;
 template class Lsqr<CUDA, float, float, double, double, magma_int_t>;
 template class Lsqr<CUDA, float, float, float, double, magma_int_t>;
+template class Lsqr<CUDA, float, __half, float, double, magma_int_t>;
+template class Lsqr<CUDA, float, __half, __half, double, magma_int_t>;
+template class Lsqr<CUDA, float, float, __half, double, magma_int_t>;
+template class Lsqr<CUDA, float, double, __half, double, magma_int_t>;
+template class Lsqr<CUDA, double, __half, double, double, magma_int_t>;
+template class Lsqr<CUDA, float, __half, __half, float, magma_int_t>;
+template class Lsqr<CUDA, double, __half, __half, double, magma_int_t>;
+template class Lsqr<CUDA, double, double, __half, double, magma_int_t>;
 //template class Fgmres<CUDA, double, float, double, magma_int_t>;
 // template class Fgmres<CUDA, double, __half, double, magma_int_t>;
 //template class Fgmres<CUDA, double, float, float, magma_int_t>;

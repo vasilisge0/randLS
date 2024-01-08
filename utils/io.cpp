@@ -10,7 +10,7 @@
 #include "../core/memory/magma_context.hpp"
 #include "../core/memory/memory.hpp"
 #include "../core/matrix/dense/dense.hpp"
-#include "../core/matrix/dense/dense.cpp"
+//#include "../core/matrix/dense/dense.cpp"
 #include "base_types.hpp"
 
 
@@ -417,6 +417,18 @@ void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t nu
     magma_free_cpu(t);
 }
 
+template<ContextType device_type>
+void print_mtx_gpu(std::shared_ptr<Context<device_type>> context, magma_int_t num_rows, magma_int_t num_cols, float* dmtx, magma_int_t ld)
+{
+    float* t;
+    auto queue = context->get_queue();
+    magma_malloc_cpu((void**)&t, ld * num_cols * sizeof(float));
+    magma_sgetmatrix(num_rows, num_cols, dmtx, ld,
+             t, ld, queue);
+    print_mtx(num_rows, num_cols, t, ld);
+    magma_free_cpu(t);
+}
+
 
 void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, double* dmtx,
     magma_int_t ld, magma_queue_t queue)
@@ -471,12 +483,12 @@ void print_mtx_gpu(magma_int_t num_rows, magma_int_t num_cols, int* dmtx,
 void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols, magma_int_t* dmtx, magma_int_t ld) {
     magma_int_t* t;
     auto context_ref = rls::share(Context<rls::CPU>::create());
-    auto T = matrix::Dense<rls::CPU, magma_int_t>::create(context_ref, dim2(num_rows, num_cols));
-    auto queue = context->get_queue();
-    auto exec_ref = context_ref->get_executor();
-    magma_igetmatrix(num_rows, num_cols, dmtx, ld,
-                     T->get_values(), ld, queue);
-    write_mtx_cpu(filename, num_rows, num_cols, t, ld);
+    //auto T = matrix::Dense<rls::CPU, magma_int_t>::create(context_ref, dim2(num_rows, num_cols));
+    //auto queue = context->get_queue();
+    //auto exec_ref = context_ref->get_executor();
+    //magma_igetmatrix(num_rows, num_cols, dmtx, ld,
+    //                 T->get_values(), ld, queue);
+    //write_mtx_cpu(filename, num_rows, num_cols, t, ld);
 }
 
 //void write_mtx_gpu(std::shared_ptr<Context<rls::CUDA>> context, const char* filename, magma_int_t num_rows, magma_int_t num_cols, double* dmtx, magma_int_t ld) {

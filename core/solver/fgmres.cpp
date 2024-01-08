@@ -958,7 +958,7 @@ template <ContextType device, typename vtype,
 void Fgmres<device, vtype, vtype_internal_0,
             vtype_precond_0, index_type>::run_with_logger()
 {
-    auto logger = config_->get_logger();
+    //auto logger = config_->get_logger();
     //if (config_->use_precond_) {
     //    for (auto i = 0; i < this->logger_.warmup_runs_; i++) {
     //        sol_->zeros();

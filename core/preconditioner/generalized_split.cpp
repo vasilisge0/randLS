@@ -57,6 +57,7 @@ template class Config<float, __half, float, magma_int_t>;
 
 } // end of generalized_split
 
+
 template <ContextType device_type, typename value_type, typename value_type_internal_0, typename value_type_precond_0, typename index_type>
 void GeneralizedSplit<device_type, value_type, value_type_internal_0, value_type_precond_0, index_type>::apply(
     std::shared_ptr<Context<device_type>> context, magma_trans_t trans, matrix::Dense<device_type, value_type>* u_vector)

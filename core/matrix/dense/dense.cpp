@@ -89,6 +89,9 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
     malloc();
     this->alloc_elems = size[0] * size[1];
     if (std::is_same<value_type, __half>::value) {
+        std::cout << "alldescr\n";
+        std::cout << "static_cast<int64_t>(this->size_[0]): " << static_cast<int64_t>(this->size_[0]) << '\n';
+        std::cout << "static_cast<int64_t>(this->size_[1]): " << static_cast<int64_t>(this->size_[1]) << '\n';
         cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
             static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
@@ -118,6 +121,11 @@ Dense<device_type, value_type>::Dense(Dense&& mtx) : Mtx<device_type>(mtx.get_co
     this->values_  = mtx.values_;
     this->ld_      = mtx.get_ld();
     auto v = mtx.get_values();
+    if (std::is_same<value_type, __half>::value) {
+        std::cout << "alldescr\n";
+        cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
+            static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
+    }
     v = nullptr;
 }
 
@@ -184,8 +192,13 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
 {
     auto exec = context->get_executor();
     wrapper_ = true;
+    alloc_elems = size[0] * size[1];
+    this->size_ = size;
+    this->ld_ = size[0];
     if (std::is_same<value_type, __half>::value) {
         values_ = values;
+        cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
+            static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
     else if (std::is_same<value_type, double>::value) {
         mtx = gko::matrix::Dense<double>::create(
@@ -203,10 +216,6 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
         auto t = static_cast<gko::matrix::Dense<float>*>(mtx.get());
         values_ = (value_type*)t->get_values();
     }
-    alloc_elems = size[0] * size[1];
-    this->size_ = size;
-    this->ld_ = size[0];
-    std::cout << "this point\n";
     values = nullptr;
 }
 
@@ -218,6 +227,8 @@ Dense<device_type, value_type>::Dense(std::shared_ptr<Context<device_type>> cont
     wrapper_ = true;
     if (std::is_same<value_type, __half>::value) {
         values_ = values;
+        cusparseCreateDnMat(&descr_, static_cast<int64_t>(this->size_[0]), static_cast<int64_t>(this->size_[1]),
+            static_cast<int64_t>(this->size_[0]), values_, CUDA_R_16F, CUSPARSE_ORDER_COL);
     }
     else if (std::is_same<value_type, double>::value) {
         mtx = gko::matrix::Dense<double>::create(
@@ -254,6 +265,7 @@ void Dense<device_type, value_type>::apply(Dense<device_type, value_type>* rhs, 
 template <ContextType device_type, typename value_type>
 void Dense<device_type, value_type>::apply(value_type alpha, Dense<device_type, value_type>* rhs, value_type beta, Dense<device_type, value_type>* result)
 {
+std::cout << "\n\n\nin precond_apply\n\n\n";
     blas::gemm(Mtx<device_type>::get_context(), MagmaNoTrans, MagmaNoTrans, this->size_[0],
           rhs->get_size()[1], this->size_[1], alpha, values_,
           this->size_[0], rhs->get_values(), rhs->get_size()[0],
@@ -361,32 +373,27 @@ template <ContextType device_type, typename value_type>
 std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::transpose()
 {
     auto c = Mtx<device_type>::get_context();
+    auto exec = c->get_executor();
     value_type* v = nullptr;
     dim2 s;
     std::shared_ptr<gko::LinOp> t;
+    memory::malloc<rls::CUDA>(&v, this->size_[0] * this->size_[1]);
     if (std::is_same<value_type, double>::value) {
-        t = static_cast<gko::matrix::Dense<double>*>(this->mtx.get())->transpose();
+        t = rls::share(static_cast<gko::matrix::Dense<double>*>(this->mtx.get())->transpose());
         s = dim2(t->get_size()[0], t->get_size()[1]);
-        v = (value_type*)static_cast<gko::matrix::Dense<double>*>(t.get())->get_values();
+        exec->copy(s[0] * s[1], (value_type*)static_cast<gko::matrix::Dense<double>*>(t.get())->get_values(), v);
     }
     else if (std::is_same<value_type, float>::value) {
-        t = static_cast<gko::matrix::Dense<float>*>(this->mtx.get())->transpose();
+        t = rls::share(static_cast<gko::matrix::Dense<float>*>(this->mtx.get())->transpose());
         s = dim2(t->get_size()[0], t->get_size()[1]);
-        v = (value_type*)static_cast<gko::matrix::Dense<float>*>(t.get())->get_values();
+        exec->copy(s[0] * s[1], (value_type*)static_cast<gko::matrix::Dense<float>*>(t.get())->get_values(), v);
     }
     else if (std::is_same<value_type, __half>::value) {
-        memory::malloc<rls::CUDA>(&v, this->size_[0] * this->size_[1]);
         s = dim2(this->size_[1], this->size_[0]);
         cuda::transpose(this->size_[0], this->size_[1], values_, this->size_[0], v, this->size_[1]);
     }
-    auto out = Dense::create(c, s);
-    auto exec = c->get_executor();
-
-    // you need to change this to take half arguments.
-    exec->copy(out->get_size()[0] * out->get_size()[1], v, out->get_values());
+    auto out = Dense::create(c, s, v);
     return out;
-    //auto out Dense::create(c, s, std::move(v));
-    //return Dense::create(c, s);
 }
 
 //template <ContextType device_type, typename value_type>
@@ -420,17 +427,19 @@ std::unique_ptr<Dense<device_type, value_type>> Dense<device_type, value_type>::
     return Dense::create(c, dim2(this->get_size()[0], this->get_size()[1]), std::move(v));
 }
 
-//template<> std::unique_ptr<Dense<rls::CUDA, __half>> Dense<rls::CUDA, __half>::transpose()
-//{
-//    auto c = this->get_context();
-//    __half* v = nullptr;
-//    dim2 s;
-//    std::shared_ptr<gko::LinOp> t;
-//    memory::malloc<rls::CUDA>(&v, this->size_[0] * this->size_[1]);
-//    s = dim2(this->size_[1], this->size_[0]);
-//    cuda::transpose(this->size_[0], this->size_[1], values_, this->size_[0], v, this->size_[1]);
-//    return Dense<rls::CUDA, __half>::create(c, s, std::move(v));
-//}
+template<> std::unique_ptr<Dense<rls::CUDA, __half>> Dense<rls::CUDA, __half>::transpose()
+{
+    auto c = this->get_context();
+    __half* v = nullptr;
+    dim2 s;
+    std::shared_ptr<gko::LinOp> t;
+    memory::malloc<rls::CUDA>(&v, this->size_[0] * this->size_[1]);
+    s = dim2(this->size_[1], this->size_[0]);
+    std::cout << "before half transpose\n";
+    cuda::transpose(this->size_[0], this->size_[1], values_, this->size_[0], v, this->size_[1]);
+    std::cout << "after half transpose\n";
+    return Dense<rls::CUDA, __half>::create(c, s, std::move(v));
+}
 
 template class Dense<CUDA, double>;
 template class Dense<CUDA, float>;

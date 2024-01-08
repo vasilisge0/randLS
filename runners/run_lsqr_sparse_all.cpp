@@ -388,10 +388,9 @@ void run_sparse_reg_lsqr_instance(double tol, int maxiter, int miniter, magma_in
             rls::preconditioner::SketchQrConfig
                 <double, vtype_precond_internal, vtype_precond_apply, magma_int_t>;
         precond_config = rls::share(precond_config_type::create(sampling_coeff));
-        std::cout << "before CREATE\n";
         //@error in next line in half precision
         precond = rls::preconditioner::SketchQr<rls::CUDA, double, vtype_precond_internal, vtype_precond_apply, magma_int_t>::create(mtx, sketch, precond_config);
-        std::cout << "AFTER CREATE\n";
+        //std::cout << "exit\n";
         //std::string str = "../lsqr_data/sprand_03_precond.mtx";
         //precond = rls::preconditioner::SketchQr<rls::CUDA, double, vtype_precond_internal, vtype_precond_apply, magma_int_t>::create(
         //    mtx, str, precond_config);
@@ -404,47 +403,47 @@ void run_sparse_reg_lsqr_instance(double tol, int maxiter, int miniter, magma_in
         //    P->get_values(), P->get_size()[0], queue);
     }
 
-//    // -------- solver construction -------- //
-//
-//    std::shared_ptr<rls::Solver<rls::CUDA>> ir;
-//    using Solver = rls::Solver<rls::CUDA>;
-//    using SolverLogger = rls::solver::iterative::Logger;
-//    using SolverConfig = rls::solver::iterative::Config;
-//    std::shared_ptr<rls::Solver<rls::CUDA>> solver;
-//    std::shared_ptr<SolverConfig> solver_config;
-//
-//    // Configure and run solver.
-//    {
-//        std::cout << "\n\n";
-//        std::cout << "        matrix: " << matrix << '\n';
-//        std::cout << "sampling_coeff: " << sampling_coeff << '\n';
-//        std::cout << "     tolerance: " << tol << '\n';
-//        //auto input_true_sol = "../lsqr_data/" + matrix + "_xtrue.mtx";
-//        auto input_true_sol = filename_true_sol;
-//        auto input_noisy_sol = filename_noisy_sol;
-//        using Lsqr = rls::solver::Lsqr
-//            <rls::CUDA, vtype_solver, vtype_solver_internal, vtype_precond_apply, double, magma_int_t>;
-//        using LsqrConfig = rls::solver::iterative::LsqrConfig
-//            <vtype_solver, vtype_solver_internal, vtype_precond_apply, double, magma_int_t>;
-//        solver_config = LsqrConfig::create();
-//        solver_config->set_precond(precond);
-//        solver_config->set_tolerance(tol);
-//        solver_config->set_stagnation_tolerance(1e-3);  // <= sqrt(gemv precision)
-//        solver_config->set_restarts(restarts);
-//        solver_config->set_min_iterations(miniter);
-//        solver_config->set_iterations(maxiter);
-//        solver_config->set_filename_relres(filename_relres);
-//        solver_config->set_filename_true_error(input_true_sol, filename_true_error);
-//        solver_config->set_filename_noisy_error(input_noisy_sol, filename_noisy_error);
-//        solver_config->set_filename_stagnation(filename_stagnation);
-//        solver_config->set_filename_similarity(filename_true_similarity, filename_noisy_similarity);
-//        sol->zeros();
-//        solver = rls::share(Lsqr::create(context, solver_config, mtx, sol, rhs));
-//        ir = rls::solver::Ir<rls::CUDA, magma_int_t>::create(solver, restarts);
-//        ir->run();
-//        auto logger = ir->get_logger();
-//        logger.write_history();
-//    }
+    // -------- solver construction -------- //
+
+    std::shared_ptr<rls::Solver<rls::CUDA>> ir;
+    using Solver = rls::Solver<rls::CUDA>;
+    using SolverLogger = rls::solver::iterative::Logger;
+    using SolverConfig = rls::solver::iterative::Config;
+    std::shared_ptr<rls::Solver<rls::CUDA>> solver;
+    std::shared_ptr<SolverConfig> solver_config;
+
+    // Configure and run solver.
+    {
+        std::cout << "\n\n";
+        std::cout << "        matrix: " << matrix << '\n';
+        std::cout << "sampling_coeff: " << sampling_coeff << '\n';
+        std::cout << "     tolerance: " << tol << '\n';
+        //auto input_true_sol = "../lsqr_data/" + matrix + "_xtrue.mtx";
+        auto input_true_sol = filename_true_sol;
+        auto input_noisy_sol = filename_noisy_sol;
+        using Lsqr = rls::solver::Lsqr
+            <rls::CUDA, vtype_solver, vtype_solver_internal, vtype_precond_apply, double, magma_int_t>;
+        using LsqrConfig = rls::solver::iterative::LsqrConfig
+            <vtype_solver, vtype_solver_internal, vtype_precond_apply, double, magma_int_t>;
+        solver_config = LsqrConfig::create();
+        solver_config->set_precond(precond);
+        solver_config->set_tolerance(tol);
+        solver_config->set_stagnation_tolerance(1e-3);  // <= sqrt(gemv precision)
+        solver_config->set_restarts(restarts);
+        solver_config->set_min_iterations(miniter);
+        solver_config->set_iterations(maxiter);
+        solver_config->set_filename_relres(filename_relres);
+        solver_config->set_filename_true_error(input_true_sol, filename_true_error);
+        solver_config->set_filename_noisy_error(input_noisy_sol, filename_noisy_error);
+        solver_config->set_filename_stagnation(filename_stagnation);
+        solver_config->set_filename_similarity(filename_true_similarity, filename_noisy_similarity);
+        sol->zeros();
+        solver = rls::share(Lsqr::create(context, solver_config, mtx, sol, rhs));
+        ir = rls::solver::Ir<rls::CUDA, magma_int_t>::create(solver, restarts);
+        ir->run();
+        auto logger = ir->get_logger();
+        logger.write_history();
+    }
 }
 
 template<typename vtype_precond_apply, typename vtype_precond_internal, typename vtype_solver_internal, typename vtype_solver>
@@ -1394,174 +1393,96 @@ void run_dense_reg_lsqr_for_precisions(solver_config_t& parameters)
 void run_sparse_reg_lsqr_for_precisions(solver_config_t& parameters)
 {
 
-    // reference run
+    //// reference run
+    //{
+    //    std::cout << "\n\nINSTANCE 0\n\n";
+    //    using vtype_precond_apply = double;
+    //    using vtype_precond_internal = double;
+    //    using vtype_solver_internal = double;
+    //    using vtype_solver = double;
+    //    auto filename_relres = parameters.filename_relres + "_0.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_0.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_0.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_0.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_0.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_0.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
+
+    //{
+    //    cudaDeviceSynchronize();
+    //    std::cout << "\n\nINSTANCE 1\n\n";
+    //    using vtype_precond_apply = double;
+    //    using vtype_precond_internal = float;
+    //    using vtype_solver_internal = double;
+    //    using vtype_solver = double;
+    //    auto filename_relres = parameters.filename_relres + "_1.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_1.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_1.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_1.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_1.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_1.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
+
     {
-        std::cout << "\n\nINSTANCE 0\n\n";
-        using vtype_precond_apply = double;
-        using vtype_precond_internal = double;
+        std::cout << "\n\nINSTANCE 2\n\n";
+        using vtype_precond_apply = __half;
+        using vtype_precond_internal = double;  // for __half, this works for float or double it doesn't
         using vtype_solver_internal = double;
         using vtype_solver = double;
-        auto filename_relres = parameters.filename_relres + "_0.mtx";
-        auto filename_true_error = parameters.filename_true_error + "_0.mtx";
-        auto filename_stagnation = parameters.filename_stagnation + "_0.mtx";
-        auto filename_noisy_error = parameters.filename_noisy_error + "_0.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_0.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_0.mtx";
-        auto filename_matrix = parameters.filename_matrix;
-        auto filename_rhs = parameters.filename_rhs;
-        auto filename_xtrue = parameters.filename_xtrue;
-        auto filename_xnoisy = parameters.filename_xnoisy;
-        run_sparse_reg_lsqr_instance
-            <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-            (
-                parameters.tol,
-                parameters.maxiter,
-                parameters.miniter,
-                parameters.restarts,
-                parameters.sampling_coeff,
-                parameters.matrix,
-                filename_relres,
-                filename_true_error,
-                filename_stagnation,
-                filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
-                filename_matrix,
-                filename_rhs,
-                filename_xtrue,
-                filename_xnoisy
-            );
-    }
-
-    {
-        cudaDeviceSynchronize();
-        std::cout << "\n\nINSTANCE 1\n\n";
-        using vtype_precond_apply = double;
-        using vtype_precond_internal = float;
-        using vtype_solver_internal = double;
-        using vtype_solver = double;
-        auto filename_relres = parameters.filename_relres + "_1.mtx";
-        auto filename_true_error = parameters.filename_true_error + "_1.mtx";
-        auto filename_stagnation = parameters.filename_stagnation + "_1.mtx";
-        auto filename_noisy_error = parameters.filename_noisy_error + "_1.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_1.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_1.mtx";
-        auto filename_matrix = parameters.filename_matrix;
-        auto filename_rhs = parameters.filename_rhs;
-        auto filename_xtrue = parameters.filename_xtrue;
-        auto filename_xnoisy = parameters.filename_xnoisy;
-        run_sparse_reg_lsqr_instance
-            <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-            (
-                parameters.tol,
-                parameters.maxiter,
-                parameters.miniter,
-                parameters.restarts,
-                parameters.sampling_coeff,
-                parameters.matrix,
-                filename_relres,
-                filename_true_error,
-                filename_stagnation,
-                filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
-                filename_matrix,
-                filename_rhs,
-                filename_xtrue,
-                filename_xnoisy
-            );
-    }
-
-    //////{
-    //////    std::cout << "\n\nINSTANCE 2\n\n";
-    //////    using vtype_precond_apply = double;
-    //////    using vtype_precond_internal = __half;
-    //////    using vtype_solver_internal = double;
-    //////    using vtype_solver = double;
-    //////    auto filename_relres = parameters.filename_relres + "_2.mtx";
-    //////    auto filename_true_error = parameters.filename_true_error + "_2.mtx";
-    //////    auto filename_stagnation = parameters.filename_stagnation + "_2.mtx";
-    //////    auto filename_noisy_error = parameters.filename_noisy_error + "_2.mtx";
-    //////    auto filename_true_similarity = parameters.filename_true_similarity + "_2.mtx";
-    //////    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_2.mtx";
-    //////    auto filename_matrix = parameters.filename_matrix;
-    //////    auto filename_rhs = parameters.filename_rhs;
-    //////    auto filename_xtrue = parameters.filename_xtrue;
-    //////    auto filename_xnoisy = parameters.filename_xnoisy;
-    //////    run_sparse_reg_lsqr_instance
-    //////        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-    //////        (
-    //////            parameters.tol,
-    //////            parameters.maxiter,
-    //////            parameters.miniter,
-    //////            parameters.restarts,
-    //////            parameters.sampling_coeff,
-    //////            parameters.matrix,
-    //////            filename_relres,
-    //////            filename_true_error,
-    //////            filename_stagnation,
-    //////            filename_noisy_error,
-    //////            filename_true_similarity,
-    //////            filename_noisy_similarity,
-    //////            filename_matrix,
-    //////            filename_rhs,
-    //////            filename_xtrue,
-    //////            filename_xnoisy
-    //////        );
-    //////}
-
-    {
-        cudaDeviceSynchronize();
-        std::cout << "\n\nINSTANCE 3\n\n";
-        using vtype_precond_apply = double;
-        using vtype_precond_internal = double;
-        using vtype_solver_internal = float;
-        using vtype_solver = double;
-        auto filename_relres = parameters.filename_relres + "_3.mtx";
-        auto filename_true_error = parameters.filename_true_error + "_3.mtx";
-        auto filename_stagnation = parameters.filename_stagnation + "_3.mtx";
-        auto filename_noisy_error = parameters.filename_noisy_error + "_3.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_3.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_3.mtx";
-        auto filename_matrix = parameters.filename_matrix;
-        auto filename_rhs = parameters.filename_rhs;
-        auto filename_xtrue = parameters.filename_xtrue;
-        auto filename_xnoisy = parameters.filename_xnoisy;
-        run_sparse_reg_lsqr_instance
-            <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-            (
-                parameters.tol,
-                parameters.maxiter,
-                parameters.miniter,
-                parameters.restarts,
-                parameters.sampling_coeff,
-                parameters.matrix,
-                filename_relres,
-                filename_true_error,
-                filename_stagnation,
-                filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
-                filename_matrix,
-                filename_rhs,
-                filename_xtrue,
-                filename_xnoisy
-            );
-    }
-
-    {
-        cudaDeviceSynchronize();
-        std::cout << "\n\nINSTANCE 4\n\n";
-        using vtype_precond_apply = double;
-        using vtype_precond_internal = float;
-        using vtype_solver_internal = float;
-        using vtype_solver = double;
-        auto filename_relres = parameters.filename_relres + "_4.mtx";
-        auto filename_true_error = parameters.filename_true_error + "_4.mtx";
-        auto filename_stagnation = parameters.filename_stagnation + "_4.mtx";
-        auto filename_noisy_error = parameters.filename_noisy_error + "_4.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_4.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_4.mtx";
+        auto filename_relres = parameters.filename_relres + "_2.mtx";
+        auto filename_true_error = parameters.filename_true_error + "_2.mtx";
+        auto filename_stagnation = parameters.filename_stagnation + "_2.mtx";
+        auto filename_noisy_error = parameters.filename_noisy_error + "_2.mtx";
+        auto filename_true_similarity = parameters.filename_true_similarity + "_2.mtx";
+        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_2.mtx";
         auto filename_matrix = parameters.filename_matrix;
         auto filename_rhs = parameters.filename_rhs;
         auto filename_xtrue = parameters.filename_xtrue;
@@ -1589,17 +1510,18 @@ void run_sparse_reg_lsqr_for_precisions(solver_config_t& parameters)
     }
 
     ////{
-    ////    std::cout << "\n\nINSTANCE 5\n\n";
+    ////    cudaDeviceSynchronize();
+    ////    std::cout << "\n\nINSTANCE 3\n\n";
     ////    using vtype_precond_apply = double;
-    ////    using vtype_precond_internal = __half;
+    ////    using vtype_precond_internal = double;
     ////    using vtype_solver_internal = float;
     ////    using vtype_solver = double;
-    ////    auto filename_relres = parameters.filename_relres + "_5.mtx";
-    ////    auto filename_true_error = parameters.filename_true_error + "_5.mtx";
-    ////    auto filename_stagnation = parameters.filename_stagnation + "_5.mtx";
-    ////    auto filename_noisy_error = parameters.filename_noisy_error + "_5.mtx";
-    ////    auto filename_true_similarity = parameters.filename_true_similarity + "_5.mtx";
-    ////    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_5.mtx";
+    ////    auto filename_relres = parameters.filename_relres + "_3.mtx";
+    ////    auto filename_true_error = parameters.filename_true_error + "_3.mtx";
+    ////    auto filename_stagnation = parameters.filename_stagnation + "_3.mtx";
+    ////    auto filename_noisy_error = parameters.filename_noisy_error + "_3.mtx";
+    ////    auto filename_true_similarity = parameters.filename_true_similarity + "_3.mtx";
+    ////    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_3.mtx";
     ////    auto filename_matrix = parameters.filename_matrix;
     ////    auto filename_rhs = parameters.filename_rhs;
     ////    auto filename_xtrue = parameters.filename_xtrue;
@@ -1626,86 +1548,164 @@ void run_sparse_reg_lsqr_for_precisions(solver_config_t& parameters)
     ////        );
     ////}
 
+    //{
+    //    cudaDeviceSynchronize();
+    //    std::cout << "\n\nINSTANCE 4\n\n";
+    //    using vtype_precond_apply = float;
+    //    using vtype_precond_internal = float;
+    //    using vtype_solver_internal = float;
+    //    using vtype_solver = float;
+    //    auto filename_relres = parameters.filename_relres + "_4.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_4.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_4.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_4.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_4.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_4.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
 
-    std::cout << "\n\n\n\n\n\n\n";
-    std::cout << "INSTANCE 6\n";
-    {
-        cudaDeviceSynchronize();
-        //@error here.
-        std::cout << "\n\nINSTANCE 6\n\n";
-        using vtype_precond_apply = float;
-        using vtype_precond_internal = float;
-        using vtype_solver_internal = float;
-        using vtype_solver = float;
-        auto filename_relres = parameters.filename_relres + "_6.mtx";
-        auto filename_true_error = parameters.filename_true_error + "_6.mtx";
-        auto filename_stagnation = parameters.filename_stagnation + "_6.mtx";
-        auto filename_noisy_error = parameters.filename_noisy_error + "_6.mtx";
-        auto filename_true_similarity = parameters.filename_true_similarity + "_6.mtx";
-        auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_6.mtx";
-        auto filename_matrix = parameters.filename_matrix;
-        auto filename_rhs = parameters.filename_rhs;
-        auto filename_xtrue = parameters.filename_xtrue;
-        auto filename_xnoisy = parameters.filename_xnoisy;
-        run_sparse_reg_lsqr_instance
-            <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-            (
-                parameters.tol,
-                parameters.maxiter,
-                parameters.miniter,
-                parameters.restarts,
-                parameters.sampling_coeff,
-                parameters.matrix,
-                filename_relres,
-                filename_true_error,
-                filename_stagnation,
-                filename_noisy_error,
-                filename_true_similarity,
-                filename_noisy_similarity,
-                filename_matrix,
-                filename_rhs,
-                filename_xtrue,
-                filename_xnoisy
-            );
-    }
+    //{
+    //    std::cout << "\n\nINSTANCE 5\n\n";
+    //    using vtype_precond_apply = double;
+    //    using vtype_precond_internal = __half;
+    //    using vtype_solver_internal = float;
+    //    using vtype_solver = double;
+    //    auto filename_relres = parameters.filename_relres + "_5.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_5.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_5.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_5.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_5.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_5.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
 
-    ////{
-    ////    std::cout << "\n\nINSTANCE 7\n\n";
-    ////    using vtype_precond_apply = float;
-    ////    using vtype_precond_internal = __half;
-    ////    using vtype_solver_internal = float;
-    ////    using vtype_solver = float;
-    ////    auto filename_relres = parameters.filename_relres + "_7.mtx";
-    ////    auto filename_true_error = parameters.filename_true_error + "_7.mtx";
-    ////    auto filename_stagnation = parameters.filename_stagnation + "_7.mtx";
-    ////    auto filename_noisy_error = parameters.filename_noisy_error + "_7.mtx";
-    ////    auto filename_true_similarity = parameters.filename_true_similarity + "_7.mtx";
-    ////    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_7.mtx";
-    ////    auto filename_matrix = parameters.filename_matrix;
-    ////    auto filename_rhs = parameters.filename_rhs;
-    ////    auto filename_xtrue = parameters.filename_xtrue;
-    ////    auto filename_xnoisy = parameters.filename_xnoisy;
-    ////    run_sparse_reg_lsqr_instance
-    ////        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
-    ////        (
-    ////            parameters.tol,
-    ////            parameters.maxiter,
-    ////            parameters.miniter,
-    ////            parameters.restarts,
-    ////            parameters.sampling_coeff,
-    ////            parameters.matrix,
-    ////            filename_relres,
-    ////            filename_true_error,
-    ////            filename_stagnation,
-    ////            filename_noisy_error,
-    ////            filename_true_similarity,
-    ////            filename_noisy_similarity,
-    ////            filename_matrix,
-    ////            filename_rhs,
-    ////            filename_xtrue,
-    ////            filename_xnoisy
-    ////        );
-    ////}
+
+    //std::cout << "\n\n\n\n\n\n\n";
+    //std::cout << "INSTANCE 6\n";
+    //{
+    //    cudaDeviceSynchronize();
+    //    //@error here.
+    //    std::cout << "\n\nINSTANCE 6\n\n";
+    //    using vtype_precond_apply = float;
+    //    using vtype_precond_internal = float;
+    //    using vtype_solver_internal = float;
+    //    using vtype_solver = float;
+    //    auto filename_relres = parameters.filename_relres + "_6.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_6.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_6.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_6.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_6.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_6.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
+
+    //{
+    //std::cout << "\n\n\n\n\n";
+    //    std::cout << "\n\nINSTANCE 7\n\n";
+    //    using vtype_precond_apply = float;
+    //    using vtype_precond_internal = __half;
+    //    using vtype_solver_internal = __half;
+    //    using vtype_solver = float;
+    //    auto filename_relres = parameters.filename_relres + "_7.mtx";
+    //    auto filename_true_error = parameters.filename_true_error + "_7.mtx";
+    //    auto filename_stagnation = parameters.filename_stagnation + "_7.mtx";
+    //    auto filename_noisy_error = parameters.filename_noisy_error + "_7.mtx";
+    //    auto filename_true_similarity = parameters.filename_true_similarity + "_7.mtx";
+    //    auto filename_noisy_similarity = parameters.filename_noisy_similarity + "_7.mtx";
+    //    auto filename_matrix = parameters.filename_matrix;
+    //    auto filename_rhs = parameters.filename_rhs;
+    //    auto filename_xtrue = parameters.filename_xtrue;
+    //    auto filename_xnoisy = parameters.filename_xnoisy;
+    //    run_sparse_reg_lsqr_instance
+    //        <vtype_precond_apply, vtype_precond_internal, vtype_solver_internal, vtype_solver>
+    //        (
+    //            parameters.tol,
+    //            parameters.maxiter,
+    //            parameters.miniter,
+    //            parameters.restarts,
+    //            parameters.sampling_coeff,
+    //            parameters.matrix,
+    //            filename_relres,
+    //            filename_true_error,
+    //            filename_stagnation,
+    //            filename_noisy_error,
+    //            filename_true_similarity,
+    //            filename_noisy_similarity,
+    //            filename_matrix,
+    //            filename_rhs,
+    //            filename_xtrue,
+    //            filename_xnoisy
+    //        );
+    //}
 }
 
 void run_fgmres_for_precisions(solver_config_t& parameters)
@@ -2203,9 +2203,9 @@ int main(int argc, char* argv[])
                 solver_config_t parameters;
                 //parameters.tol = tol;
                 parameters.tol = 1e-5;
-                parameters.maxiter = 450;
-                parameters.miniter = 20;
-                parameters.restarts = 3;
+                parameters.maxiter = 6;
+                parameters.miniter = 5;
+                parameters.restarts = 1;
                 parameters.sampling_coeff = sampling_coeff;
                 parameters.matrix = matrix;
                 std::ostringstream streamObj;

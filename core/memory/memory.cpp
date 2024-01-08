@@ -210,6 +210,10 @@ void setmatrix(magma_int_t m, magma_int_t n, float* A, magma_int_t ldA,
     magma_ssetmatrix(m, n, A, ldA, B, ldB, queue);
 }
 
+template<> void zeros(dim2 size, int* values)
+{
+
+}
 
 }  // end of namespace memory
 }  // end of namespace rls

@@ -7,6 +7,7 @@
 #include "../../include/base_types.hpp"
 #include "../../cuda/preconditioner/preconditioner_kernels.cuh"
 #include "../../utils/io.hpp"
+#include "../../utils/convert.hpp"
 
 
 namespace rls {
@@ -71,115 +72,30 @@ void GaussianSketch<device_type, value_type, value_type_apply, index_type>::appl
                    t->get_ld(), zero, result->get_values(), result->get_ld());
     }
     else if (auto t = dynamic_cast<matrix::Sparse<device_type, value_type_apply, index_type>*>(rhs.get()); t != nullptr) {
+    std::cout << ">>>test\n";
         auto context = mtx_->get_context();
         auto exec = context->get_executor();
-        //auto one = gko::initialize<gko::matrix::Dense<value_type>>(
-        //    {(value_type)1.0}, exec);
-        //auto zero = gko::initialize<gko::matrix::Dense<value_type>>(
-        //    {(value_type)0.0}, exec);
-        //mtx_->get_mtx()->apply(one, t->get_mtx(), zero, result->get_mtx());
-        //// Fix this
-        //auto A = static_cast<gko::matrix::Csr<value_type_apply, index_type>*>(t->get_mtx().get())->transpose();
-        //auto S = static_cast<gko::matrix::Dense<value_type_apply>*>(mtx_->get_mtx())->transpose();
-        //auto t1 = gko::matrix::Dense<value_type_apply>::create(exec, gko::dim<2>(A->get_size()[0], S->get_size()[1]));
-        value_type one = 1.0;
-        value_type zero = 0.0;
-        std::cout << "<here>\n";
-
+        value_type_apply one = 1.0;
+        value_type_apply zero = 0.0;
         auto A = t->transpose();
         auto S = mtx_->transpose();
-
-        std::cout << "S: \n";
-        io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1],
-            S->get_values(), S->get_size()[0]);
-
-        std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << "\n";
-        auto T = mtx_->get_mtx();
-        std::cout << "T->get_size()[0]: " << T->get_size()[0] << '\n';
-
-        //{
-        //    auto queue = context->get_queue();
-        //    std::cout << "\n\n\n before mm:\n";
-        //    std::cout << "mtx_\n";
-        //    io::scan_for_nan_gpu(context, mtx_->get_size()[0], mtx_->get_size()[1], mtx_->get_values(),
-        //        mtx_->get_ld());
-
-        //    std::cout << "s\n";
-        //    io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1], S->get_values(),
-        //        S->get_ld());
-
-        //    std::cout << "mtx_\n";
-        //    io::scan_for_nan_gpu(context, mtx_->get_size()[0], mtx_->get_size()[1], mtx_->get_values(),
-        //        mtx_->get_ld());
-
-        //    std::cout << "s\n";
-        //    io::scan_for_nan_gpu(context, S->get_size()[0], S->get_size()[1], S->get_values(),
-        //        S->get_ld());
-
-        //    std::cout << "t\n";
-        //    io::scan_for_nan_gpu(context, t->get_nnz(), 1, t->get_values(),
-        //        t->get_nnz());
-
-        //    std::cout << "A\n";
-        //    io::scan_for_nan_gpu(context, A->get_nnz(), 1, A->get_values(),
-        //        A->get_nnz());
-        //    //io::write_mtx("S4.mtx", t->get_nnz(), 1,
-        //    //    (float*)t->get_values(), t->get_nnz(), queue);
-        //}
-
-        ////auto A1 = matrix::Sparse<device_type, value_type_apply, index_type>::create(context,
-        ////    A->get_size(), A->get_nnz());
-        ////auto S1 = matrix::Dense<device_type, value_type_apply>::create(context,
-        ////    S->get_size());
-        //std::cout << "mtx_->get_size()[0]: " << mtx_->get_size()[0] << '\n';
-        //std::cout << "mtx_->get_size()[1]: " << mtx_->get_size()[1] << '\n';
-        //std::cout << "t->get_size()[0]: " << t->get_size()[0] << '\n';
-        //std::cout << "t->get_size()[1]: " << t->get_size()[1] << '\n';
-        //std::cout << "A->get_size()[0]: " << A->get_size()[0] << '\n';
-        //std::cout << "A->get_size()[1]: " << A->get_size()[1] << '\n';
-        //std::cout << "S->get_size()[0]: " << S->get_size()[0] << '\n';
-        //std::cout << "S->get_size()[1]: " << S->get_size()[1] << '\n';
-        //std::cout << "S->get_ld(): " << S->get_ld() << '\n';
         auto t1_size = dim2(static_cast<int>(A->get_size()[0]), static_cast<int>(S->get_size()[1]));
         auto t1 = matrix::Dense<device_type, value_type_apply>::create(context, t1_size);
-        //std::cout << "t1->get_size()[0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << '\n';
-        //std::cout << "t1->get_ld(): " << t1->get_ld() << '\n';
-        //std::cout << "before apply\n";
-
-    {
-        ////auto precond_mtx_ = precond_mtx;
-        ////io::write_mtx("precond_hgdp.mtx", S->get_size()[0], S->get_size()[1],
-        ////    (double*)S->get_values(), S->get_ld(), queue);
-    }
-        //cudaDeviceSynchronize();
+        std::cout << "before apply" << '\n';
+        std::cout << "sizeof(mtx_->get_values()): " << sizeof(mtx_->get_values()) << '\n';
+        std::cout << "sizeof(value_type_apply): " << sizeof(value_type_apply) << '\n';
         A->apply(one, S.get(), zero, t1.get());
-        //cudaDeviceSynchronize();
-
-        ////A1->apply(one, S.get(), zero, t1.get());
-        ////A1->apply(one, S1.get(), zero, t1.get());
-        //std::cout << "after apply\n";
+        // this works also
         //exec->copy(t1->get_size()[0] * t1->get_size()[1], t1->get_values(),
         //    result->get_values());
-
-        //{
-        //    std::cout << "\n\nbefore: \n";
-        //    auto queue = context->get_queue();
-        //    io::print_mtx_gpu(4, 4, result->get_values(), result->get_ld(), queue);
-        //}
-
-        //{
-        //    auto queue = context->get_queue();
-        //    std::cout << "before copy\n";
-        //    //io::scan_for_nan_gpu(context, result->get_size()[0], result->get_size()[1],
-        //    //    result->get_values(), result->get_ld());
-        //    io::scan_for_nan_gpu(context, t1->get_size()[0], t1->get_size()[1],
-        //        t1->get_values(), t1->get_size()[0]);
-        //}
-
-std::cout << "result->get_size()[0]: " << result->get_size()[0] << '\n';
-std::cout << "result->get_ld(): " << result->get_ld() << '\n';
-        //cuda::transpose(t1->get_size()[0], t1->get_size()[1], t1->get_values(),
-        //    t1->get_ld(), result->get_values(), result->get_ld());
+        std::cout << "t1->get_size(){0]: " << t1->get_size()[0] << ", t1->get_size()[1]: " << t1->get_size()[1] << ", t1->get_ld(): " << t1->get_ld() << '\n';
+        utils::convert(context,
+            (int)(t1->get_size()[0] * t1->get_size()[1]),
+            1,
+            t1->get_values(),
+            (int)(t1->get_size()[0] * t1->get_size()[1]),
+            result->get_values(),
+            (int)(t1->get_size()[0] * t1->get_size()[1]));
     }
 }
 
@@ -189,9 +105,7 @@ GaussianSketch<device_type, value_type, value_type_apply, index_type>::GaussianS
     this->context_ = context;
     auto mtx = rls::share(matrix::Dense<device_type, double>::create(context, size));
     this->mtx_ = matrix::Dense<device_type, value_type_apply>::create(context, size);
-    std::cout << "sizeof(value_type): " << sizeof(value_type) << '\n';
     sketch::gaussian_sketch_impl(mtx);
-    std::cout << "in copy\n";
     mtx_->copy_from(mtx.get());
 }
 
